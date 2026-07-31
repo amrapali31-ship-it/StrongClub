@@ -24,7 +24,7 @@ import { useState, useTransition } from 'react';
 import { DeleteExerciseButton } from '@/components/admin/DeleteExerciseButton';
 import { MediaThumb } from '@/components/MediaFrame';
 import { setsLabel } from '@/lib/media';
-import { readOrderFromRows } from '@/lib/queries';
+import { readOrderFromRows } from '@/lib/ordering';
 import type { Exercise } from '@/lib/types';
 
 /**
