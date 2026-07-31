@@ -9,7 +9,9 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     title: 'StrongClub',
-    statusBarStyle: 'default',
+    // Added to the home screen, the app runs full-screen — a light status bar
+    // would sit oddly above a near-black page.
+    statusBarStyle: 'black',
   },
 };
 

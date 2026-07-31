@@ -16,8 +16,11 @@ import sharp from 'sharp';
 
 const SOURCE = path.join(process.cwd(), 'src', 'app', 'icon.svg');
 
+/** The mark's own background, used to fill the corners. Keep in sync with the SVG. */
+const BRAND = '#ff4d9d';
+
 const OUTPUTS = [
-  // Next picks these up by filename convention and emits the right <link> tags.
+  // Next picks this up by filename convention and emits the apple-touch-icon link.
   { file: path.join('src', 'app', 'apple-icon.png'), size: 180 },
   // Referenced by the web manifest.
   { file: path.join('public', 'icon-192.png'), size: 192 },
@@ -29,7 +32,17 @@ const svg = await fs.readFile(SOURCE);
 for (const { file, size } of OUTPUTS) {
   const out = path.join(process.cwd(), file);
   await fs.mkdir(path.dirname(out), { recursive: true });
-  await sharp(svg, { density: 384 }).resize(size, size).png().toFile(out);
+
+  await sharp(svg, { density: 384 })
+    .resize(size, size)
+    // Full-bleed square, no alpha. The SVG has its own rounded corners for the
+    // browser tab, but a home-screen icon must not: iOS paints transparency
+    // black and then applies its own mask, which would leave dark wedges in
+    // the corners. Filling them with the brand colour lets the mask cut clean.
+    .flatten({ background: BRAND })
+    .png()
+    .toFile(out);
+
   console.log(`  ${file}  ${size}×${size}`);
 }
 

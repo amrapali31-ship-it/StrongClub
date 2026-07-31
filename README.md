@@ -251,6 +251,15 @@ links the SVG for the browser tab automatically from its filename.
 Check it at 32px before committing — a mark that reads well large can turn to
 mush in a tab.
 
+The generated PNGs are deliberately **full-bleed and opaque**: the SVG's rounded
+corners are right for a browser tab, but a home-screen icon must not have them.
+iOS paints transparency black and then applies its own mask, which would leave
+dark wedges around the shape; Android crops to the launcher's shape. So the
+script fills the corners with the brand colour and drops the alpha channel.
+
+**iOS caches the home-screen icon when the shortcut is created.** Changing the
+icon won't update an existing shortcut — delete it and add it again.
+
 ## Checks
 
 ```bash
