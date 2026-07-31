@@ -53,8 +53,11 @@ interface Props {
   showHeadings: boolean;
   /** Grouped display order, computed on the server so first paint matches. */
   groups: { category: string; heading: string; exercises: Exercise[] }[];
+  /** Section names already in use, offered while renaming. */
+  suggestions: string[];
   reorder: (formData: FormData) => Promise<void>;
   remove: (formData: FormData) => Promise<void>;
+  rename: (formData: FormData) => Promise<void>;
 }
 
 function toRows(
@@ -82,8 +85,10 @@ export function ExerciseReorder({
   workoutId,
   groups,
   showHeadings,
+  suggestions,
   reorder,
   remove,
+  rename,
 }: Props) {
   const [rows, setRows] = useState<Row[]>(() => toRows(groups, showHeadings));
   const [, startTransition] = useTransition();
@@ -157,11 +162,14 @@ export function ExerciseReorder({
         <ul className="relative mt-4 flex flex-col gap-2">
           {rows.map((row) =>
             row.kind === 'heading' ? (
-              <li
-                key={row.id}
-                className="mt-4 mb-1 text-sm font-bold tracking-widest text-brand uppercase first:mt-0"
-              >
-                {row.heading}
+              <li key={row.id} className="mt-4 mb-1 first:mt-0">
+                <SectionHeading
+                  workoutId={workoutId}
+                  category={row.category}
+                  heading={row.heading}
+                  suggestions={suggestions}
+                  rename={rename}
+                />
               </li>
             ) : (
               <SortableExercise
@@ -229,5 +237,79 @@ function SortableExercise({
         <DeleteExerciseButton name={exercise.name} />
       </form>
     </li>
+  );
+}
+
+
+/**
+ * Section headings are free text and renameable in place. Renaming moves every
+ * exercise in that section across, so the list doesn't reshuffle underneath.
+ */
+function SectionHeading({
+  workoutId,
+  category,
+  heading,
+  suggestions,
+  rename,
+}: {
+  workoutId: string;
+  category: string;
+  heading: string;
+  suggestions: string[];
+  rename: (formData: FormData) => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        onClick={() => setEditing(true)}
+        className="group flex items-center gap-2 text-sm font-bold tracking-widest text-brand uppercase"
+      >
+        {heading}
+        <span
+          aria-hidden
+          className="text-xs tracking-normal text-muted normal-case opacity-0 transition group-hover:opacity-100"
+        >
+          rename
+        </span>
+      </button>
+    );
+  }
+
+  return (
+    <form
+      action={rename}
+      onSubmit={() => setEditing(false)}
+      className="flex items-center gap-2"
+    >
+      <input type="hidden" name="workoutId" value={workoutId} />
+      <input type="hidden" name="from" value={category} />
+      <input
+        name="to"
+        defaultValue={category}
+        list="section-names"
+        autoFocus
+        placeholder="e.g. Strength"
+        aria-label="Section name"
+        className="field max-w-56 py-2 text-sm"
+      />
+      <datalist id="section-names">
+        {suggestions.map((s) => (
+          <option key={s} value={s} />
+        ))}
+      </datalist>
+      <button type="submit" className="shrink-0 rounded-lg bg-brand px-3 py-2 text-sm font-bold text-canvas">
+        Save
+      </button>
+      <button
+        type="button"
+        onClick={() => setEditing(false)}
+        className="shrink-0 px-1 text-sm font-semibold text-muted hover:text-ink"
+      >
+        Cancel
+      </button>
+    </form>
   );
 }

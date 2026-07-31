@@ -52,8 +52,8 @@ export interface Exercise {
 }
 
 /**
- * Order matters: warm-up always opens a workout and cool-down always closes
- * it, whatever order the exercises were added in.
+ * Suggested section names, offered in the pickers. Sections are free text —
+ * type anything you like — so this is a starting point, not a closed set.
  */
 export const EXERCISE_CATEGORIES = [
   'Warm-up',
@@ -65,9 +65,6 @@ export const EXERCISE_CATEGORIES = [
   'Cardio',
   'Cool-down',
 ] as const;
-
-export const FIRST_CATEGORY = 'Warm-up';
-export const LAST_CATEGORY = 'Cool-down';
 
 export type ExerciseCategory = (typeof EXERCISE_CATEGORIES)[number];
 

@@ -19,6 +19,13 @@ export default async function AdminExercise({
   const exercise = await db.getExercise(exerciseId);
   if (!exercise) notFound();
 
+  const library = await db.listLibrary();
+  const sectionSuggestions = [
+    ...new Set([...EXERCISE_CATEGORIES, ...library.map((e) => e.category)]),
+  ]
+    .filter(Boolean)
+    .sort();
+
   return (
     <>
       <Link
@@ -42,25 +49,26 @@ export default async function AdminExercise({
             <label htmlFor="category" className="label">
               Section
             </label>
-            <select
+            {/* Free text with suggestions, so any section name works. */}
+            <input
               id="category"
               name="category"
               defaultValue={exercise.category ?? ''}
+              list="section-suggestions"
+              placeholder="e.g. Strength"
               className="field"
-            >
-              <option value="">No section</option>
-              {EXERCISE_CATEGORIES.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
+            />
+            <datalist id="section-suggestions">
+              {sectionSuggestions.map((category) => (
+                <option key={category} value={category} />
               ))}
-            </select>
+            </datalist>
           </div>
         </div>
 
         <p className="mt-2 text-sm text-muted">
           Exercises sharing a section are grouped together under a heading when your parents open
-          the workout.
+          the workout. Type anything &mdash; leave it blank for no section.
         </p>
 
         <div className="mt-5">
@@ -101,17 +109,13 @@ export default async function AdminExercise({
             edits to update the stored version.
           </p>
         </div>
-        <select
+        <input
           name="category"
           defaultValue={exercise.category || EXERCISE_CATEGORIES[0]}
+          list="section-suggestions"
+          aria-label="Library section"
           className="field sm:w-40"
-        >
-          {EXERCISE_CATEGORIES.map((category) => (
-            <option key={category} value={category}>
-              {category}
-            </option>
-          ))}
-        </select>
+        />
         <button type="submit" className="btn-secondary shrink-0 text-base">
           Save to library
         </button>

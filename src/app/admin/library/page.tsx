@@ -12,6 +12,15 @@ export default async function AdminLibrary() {
   const library = await db.listLibrary();
   const withVideo = library.filter((e) => e.media_type !== 'none').length;
 
+  // Sections are free text, so list the suggested ones in their intended order
+  // and append whatever else the coach has invented.
+  const used = [...new Set(library.map((e) => e.category))];
+  const suggested = EXERCISE_CATEGORIES.filter((c) => used.includes(c));
+  const custom = used.filter((c) => c && !suggested.includes(c as never)).sort();
+  const sections = [...suggested, ...custom, ...(used.includes('') ? [''] : [])].map(
+    (category) => ({ category, items: library.filter((e) => e.category === category) }),
+  );
+
   return (
     <>
       <Link href="/admin" className="text-sm font-semibold text-muted hover:text-ink">
@@ -44,13 +53,21 @@ export default async function AdminLibrary() {
           <label htmlFor="category" className="label">
             Category
           </label>
-          <select id="category" name="category" className="field">
-            {EXERCISE_CATEGORIES.map((category) => (
-              <option key={category} value={category}>
-                {category}
-              </option>
-            ))}
-          </select>
+          <input
+            id="category"
+            name="category"
+            defaultValue={EXERCISE_CATEGORIES[1]}
+            list="library-sections"
+            className="field"
+          />
+          <datalist id="library-sections">
+            {[...new Set([...EXERCISE_CATEGORIES, ...library.map((e) => e.category)])]
+              .filter(Boolean)
+              .sort()
+              .map((category) => (
+                <option key={category} value={category} />
+              ))}
+          </datalist>
         </div>
         <button type="submit" className="btn-primary shrink-0 text-base">
           Add
@@ -67,71 +84,41 @@ export default async function AdminLibrary() {
         </div>
       ) : (
         <div className="mt-8 flex flex-col gap-8">
-          {EXERCISE_CATEGORIES.map((category) => {
-            const items = library.filter((e) => e.category === category);
-            if (items.length === 0) return null;
+          {sections.map(({ category, items }) => (
+            <section key={category || 'other'}>
+              <h2 className="text-lg font-extrabold tracking-tight">
+                {category || 'No section'}{' '}
+                <span className="text-base font-semibold text-muted">({items.length})</span>
+              </h2>
 
-            return (
-              <section key={category}>
-                <h2 className="text-lg font-extrabold tracking-tight">
-                  {category}{' '}
-                  <span className="text-base font-semibold text-muted">({items.length})</span>
-                </h2>
-
-                <ul className="mt-3 flex flex-col gap-2">
-                  {items.map((exercise) => (
-                    <li key={exercise.id}>
-                      <Link
-                        href={`/admin/library/${exercise.id}`}
-                        className="card flex items-center gap-3 p-3 transition hover:border-ink/25"
-                      >
-                        <MediaThumb
-                          mediaType={exercise.media_type}
-                          url={exercise.media_url}
-                          name={exercise.name}
-                        />
-                        <div className="min-w-0 flex-1">
-                          <p className="font-bold">{exercise.name}</p>
-                          <p className="text-sm text-muted">
-                            {setsLabel(exercise)}
-                            {exercise.media_type === 'none' && (
-                              <span className="ml-2 text-brand">no video</span>
-                            )}
-                          </p>
-                        </div>
-                        <span className="shrink-0 text-sm font-semibold text-brand">Edit</span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            );
-          })}
-
-          {/* Anything typed into a category that later gets renamed still shows. */}
-          {(() => {
-            const known = new Set<string>(EXERCISE_CATEGORIES);
-            const orphans = library.filter((e) => !known.has(e.category));
-            if (orphans.length === 0) return null;
-            return (
-              <section>
-                <h2 className="text-lg font-extrabold tracking-tight">Other</h2>
-                <ul className="mt-3 flex flex-col gap-2">
-                  {orphans.map((exercise) => (
-                    <li key={exercise.id}>
-                      <Link
-                        href={`/admin/library/${exercise.id}`}
-                        className="card flex items-center gap-3 p-3"
-                      >
-                        <span className="font-bold">{exercise.name}</span>
-                        <span className="ml-auto text-sm text-muted">{exercise.category}</span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            );
-          })()}
+              <ul className="mt-3 flex flex-col gap-2">
+                {items.map((exercise) => (
+                  <li key={exercise.id}>
+                    <Link
+                      href={`/admin/library/${exercise.id}`}
+                      className="card flex items-center gap-3 p-3 transition hover:border-ink/25"
+                    >
+                      <MediaThumb
+                        mediaType={exercise.media_type}
+                        url={exercise.media_url}
+                        name={exercise.name}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold">{exercise.name}</p>
+                        <p className="text-sm text-muted">
+                          {setsLabel(exercise)}
+                          {exercise.media_type === 'none' && (
+                            <span className="ml-2 text-brand">no video</span>
+                          )}
+                        </p>
+                      </div>
+                      <span className="shrink-0 text-sm font-semibold text-brand">Edit</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
         </div>
       )}
     </>

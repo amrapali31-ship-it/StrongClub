@@ -19,6 +19,12 @@ export default async function AdminLibraryExercise({
   const exercise = await db.getLibraryExercise(libraryId);
   if (!exercise) notFound();
 
+  const sectionSuggestions = [
+    ...new Set([...EXERCISE_CATEGORIES, ...(await db.listLibrary()).map((e) => e.category)]),
+  ]
+    .filter(Boolean)
+    .sort();
+
   return (
     <>
       <Link href="/admin/library" className="text-sm font-semibold text-muted hover:text-ink">
@@ -39,18 +45,19 @@ export default async function AdminLibraryExercise({
             <label htmlFor="category" className="label">
               Category
             </label>
-            <select
+            <input
               id="category"
               name="category"
               defaultValue={exercise.category}
+              list="section-suggestions"
+              placeholder="e.g. Strength"
               className="field"
-            >
-              {EXERCISE_CATEGORIES.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
+            />
+            <datalist id="section-suggestions">
+              {sectionSuggestions.map((category) => (
+                <option key={category} value={category} />
               ))}
-            </select>
+            </datalist>
           </div>
         </div>
 

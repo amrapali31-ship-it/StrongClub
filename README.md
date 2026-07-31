@@ -152,8 +152,15 @@ still scrolls normally under a thumb; on touch it needs a brief press-and-hold
 for the same reason. Dropping an exercise under a different heading moves it
 into that section.
 
-**Warm-up** always opens a workout and **Cool-down** always closes it, whatever
-order you added them in. Everything between follows the order you arranged the
+Section names are **free text**. Tap a heading in the admin workout view to
+rename it — every exercise in that section moves across. The rename is scoped to
+that workout: the same name elsewhere, and in the library, is left alone. The
+suggested names are just suggestions; type "Strength", "Conditioning", anything.
+
+A section named like a **warm-up** always opens a workout and one named like a
+**cool-down** (or "Stretches") always closes it, whatever
+order you added them in. That matching ignores case, spaces and hyphens, so
+"Warm up", "warm-up" and "WARMUP" all behave the same. Everything between follows the order you arranged the
 exercises. Reorder arrows move an exercise **within** its own section — crossing
 a boundary would silently recategorise it.
 

@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
-import { FIRST_CATEGORY, LAST_CATEGORY, type Exercise, type Week, type Workout } from '@/lib/types';
+import { closesWorkout, opensWorkout } from '@/lib/ordering';
+import type { Exercise, Week, Workout } from '@/lib/types';
 
 export interface WorkoutProgress {
   workout: Workout;
@@ -44,11 +45,12 @@ export function groupExercises(exercises: Exercise[]): ExerciseGroup[] {
     else groups.push({ category, heading: category || 'Also', exercises: [exercise] });
   }
 
-  // Warm-up opens, cool-down closes, uncategorised sits just before the
-  // cool-down. Everything else keeps the order the coach arranged.
+  // A warm-up opens and a cool-down closes, however they've been spelled;
+  // uncategorised sits just before the cool-down. Everything else keeps the
+  // order the coach arranged.
   const rank = (g: ExerciseGroup) => {
-    if (g.category === FIRST_CATEGORY) return 0;
-    if (g.category === LAST_CATEGORY) return 3;
+    if (opensWorkout(g.category)) return 0;
+    if (closesWorkout(g.category)) return 3;
     return g.category ? 1 : 2;
   };
 

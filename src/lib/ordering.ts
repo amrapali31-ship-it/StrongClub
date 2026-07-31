@@ -6,6 +6,27 @@
  * component drags the filesystem into the browser bundle and the build fails.
  */
 
+/**
+ * Sections are free text, so "Warm-up", "Warm up" and "warmup" all have to
+ * count as the same thing when deciding what opens and closes a workout.
+ */
+export function normaliseCategory(category: string): string {
+  return category.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+const OPENS_WORKOUT = ['warmup', 'warmups'];
+const CLOSES_WORKOUT = ['cooldown', 'cooldowns', 'stretch', 'stretches'];
+
+/** Sections that should always come first, whatever they're called. */
+export function opensWorkout(category: string): boolean {
+  return OPENS_WORKOUT.includes(normaliseCategory(category));
+}
+
+/** Sections that should always come last. */
+export function closesWorkout(category: string): boolean {
+  return CLOSES_WORKOUT.includes(normaliseCategory(category));
+}
+
 export interface OrderRow {
   kind: 'heading' | 'exercise';
   id: string;

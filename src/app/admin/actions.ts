@@ -448,6 +448,30 @@ export async function removeExercise(formData: FormData): Promise<void> {
 }
 
 /**
+ * Renames a section within one workout — every exercise currently in it moves
+ * to the new name. Scoped to this workout on purpose: the same section name
+ * elsewhere, and in the library, is left alone.
+ */
+export async function renameSection(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const workoutId = str(formData, 'workoutId');
+  const from = str(formData, 'from');
+  const to = str(formData, 'to');
+
+  if (from === to) return;
+
+  const exercises = await db.listExercises(workoutId);
+  await Promise.all(
+    exercises
+      .filter((e) => (e.category ?? '') === from)
+      .map((e) => db.updateExercise(e.id, { category: to })),
+  );
+
+  revalidatePath(`/admin/workout/${workoutId}`);
+  revalidatePath('/home');
+}
+
+/**
  * Persists a drag-and-drop reorder in one go: the client sends the exercises in
  * their new visual order, each already tagged with the section it was dropped
  * into, and positions are reassigned from that order.

@@ -6,6 +6,7 @@ import {
   addExerciseFromLibrary,
   removeExercise,
   removeWorkout,
+  renameSection,
   reorderExercises,
   saveWorkout,
 } from '@/app/admin/actions';
@@ -33,6 +34,17 @@ export default async function AdminWorkout({
 
   const groups = groupExercises(exercises);
   const showHeadings = shouldShowGroupHeadings(groups);
+
+  // Offer whatever's already in use anywhere, plus the built-in suggestions.
+  const sectionSuggestions = [
+    ...new Set([
+      ...EXERCISE_CATEGORIES,
+      ...library.map((e) => e.category),
+      ...exercises.map((e) => e.category),
+    ]),
+  ]
+    .filter(Boolean)
+    .sort();
 
   return (
     <>
@@ -77,8 +89,10 @@ export default async function AdminWorkout({
               exercises={exercises}
               groups={groups}
               showHeadings={showHeadings}
+              suggestions={sectionSuggestions}
               reorder={reorderExercises}
               remove={removeExercise}
+              rename={renameSection}
             />
             <p className="mt-3 text-sm text-muted">
               Drag the <span className="font-mono text-ink">⠿</span> handle to reorder.
