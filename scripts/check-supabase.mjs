@@ -32,6 +32,17 @@ if (key.startsWith('eyJ')) {
   }
 }
 
+// supabase-js appends /rest/v1 itself; pasting the full REST endpoint produces
+// a doubled path that fails in confusing ways rather than erroring outright.
+if (/\/rest\/v1/.test(url) || /\/$/.test(url)) {
+  const suggestion = url.replace(/\/rest\/v1\/?$/, '').replace(/\/$/, '');
+  console.error('That URL has extra path on the end.\n');
+  console.error(`  you have:  ${url}`);
+  console.error(`  should be: ${suggestion}\n`);
+  console.error('Fix NEXT_PUBLIC_SUPABASE_URL in .env.local and run this again.');
+  process.exit(1);
+}
+
 const supabase = supabaseFromEnv();
 console.log(`Project: ${url}\n`);
 
@@ -39,8 +50,10 @@ let failed = false;
 
 for (const table of TABLES) {
   const { count, error } = await supabase.from(table).select('*', { count: 'exact', head: true });
-  if (error) {
-    console.log(`  ✗ ${table.padEnd(22)} ${error.message}`);
+  // A null count with no error means the request didn't reach the table at
+  // all — treat it as a failure rather than reporting a hollow success.
+  if (error || count === null) {
+    console.log(`  ✗ ${table.padEnd(22)} ${error?.message ?? 'no response from this table'}`);
     failed = true;
   } else {
     console.log(`  ✓ ${table.padEnd(22)} ${count} row${count === 1 ? '' : 's'}`);
