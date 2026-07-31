@@ -18,6 +18,39 @@ export async function getCurrentWeek(): Promise<Week | null> {
   return weeks[0] ?? null;
 }
 
+/** Monday of the week containing `date`, as yyyy-mm-dd. */
+function mondayOf(date: Date): string {
+  const copy = new Date(date);
+  copy.setDate(copy.getDate() - ((copy.getDay() + 6) % 7));
+  return copy.toISOString().slice(0, 10);
+}
+
+/**
+ * Works out the name and date for the next week so you never have to type
+ * either. Slots in after your latest week; falls back to this Monday when
+ * there's nothing to follow on from.
+ */
+export async function nextWeekSlot(): Promise<{ title: string; start_date: string }> {
+  const weeks = await db.listWeeks();
+
+  const latest = weeks
+    .map((w) => w.start_date)
+    .filter((d): d is string => Boolean(d))
+    .sort()
+    .at(-1);
+
+  let start: string;
+  if (latest) {
+    const next = new Date(`${latest}T00:00:00`);
+    next.setDate(next.getDate() + 7);
+    start = next.toISOString().slice(0, 10);
+  } else {
+    start = mondayOf(new Date());
+  }
+
+  return { title: `Week ${weeks.length + 1}`, start_date: start };
+}
+
 export function estimateMinutes(exercises: Exercise[]): number {
   const seconds = exercises.reduce((total, e) => {
     const work = e.mode === 'time' ? (e.duration_seconds ?? 30) : (e.reps ?? 10) * 4;

@@ -1,13 +1,23 @@
 import Link from 'next/link';
 
-import { addProfile, addWeek, removeProfile } from '@/app/admin/actions';
+import { addProfile, addWeek, removeProfile, repeatLastWeek } from '@/app/admin/actions';
 import { formatWeek } from '@/components/WeekBoard';
 import { db, usingSupabase } from '@/lib/db';
+import { nextWeekSlot } from '@/lib/queries';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminHome() {
-  const [weeks, profiles] = await Promise.all([db.listWeeks(), db.listProfiles()]);
+  const [weeks, profiles, next] = await Promise.all([
+    db.listWeeks(),
+    db.listProfiles(),
+    nextWeekSlot(),
+  ]);
+
+  const nextDateLabel = new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'long',
+  }).format(new Date(`${next.start_date}T00:00:00`));
 
   const weekSummaries = await Promise.all(
     weeks.map(async (week) => ({
@@ -68,28 +78,35 @@ export default async function AdminHome() {
           )}
         </ul>
 
-        <form action={addWeek} className="card mt-4 flex flex-col gap-3 p-4 sm:flex-row sm:items-end">
-          <div className="flex-1">
-            <label htmlFor="title" className="label">
-              New week name
-            </label>
-            <input
-              id="title"
-              name="title"
-              placeholder="e.g. Week 1 — Getting started"
-              className="field"
-            />
-          </div>
-          <div>
-            <label htmlFor="start_date" className="label">
-              Starts
-            </label>
-            <input id="start_date" name="start_date" type="date" className="field" />
-          </div>
-          <button type="submit" className="btn-primary shrink-0 text-base">
-            Add week
-          </button>
-        </form>
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+          {weeks.length > 0 && (
+            <form action={repeatLastWeek} className="flex-1">
+              <button type="submit" className="btn-primary w-full">
+                Repeat last week
+              </button>
+            </form>
+          )}
+          <form action={addWeek} className="flex-1">
+            <button
+              type="submit"
+              className={weeks.length > 0 ? 'btn-secondary w-full' : 'btn-primary w-full'}
+            >
+              Start {next.title} empty
+            </button>
+          </form>
+        </div>
+
+        <p className="mt-3 text-sm text-muted">
+          {weeks.length > 0 && (
+            <>
+              Repeating copies <span className="font-semibold text-ink">{weeks[0].title}</span>{' '}
+              across in full &mdash; workouts, exercises and videos &mdash; ready to tweak.{' '}
+            </>
+          )}
+          Either way you get <span className="font-semibold text-ink">{next.title}</span>, dated{' '}
+          <span className="font-semibold text-ink">{nextDateLabel}</span>, saved as a draft. Rename
+          it on the next screen if you want to.
+        </p>
       </section>
 
       <section className="mt-10">

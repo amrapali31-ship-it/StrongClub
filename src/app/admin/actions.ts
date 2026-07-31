@@ -7,6 +7,7 @@ import { checkPasscode, isAdmin, signInAdmin, signOutAdmin } from '@/lib/auth';
 import { db } from '@/lib/db';
 import type { DraftWeek } from '@/lib/importer';
 import { detectMediaType } from '@/lib/media';
+import { nextWeekSlot } from '@/lib/queries';
 import { EXERCISE_CATEGORIES, type ExerciseMode, type MediaType } from '@/lib/types';
 
 async function requireAdmin(): Promise<void> {
@@ -61,15 +62,47 @@ export async function removeProfile(formData: FormData): Promise<void> {
 
 /* ------------------------------------------------------------------ weeks */
 
-export async function addWeek(formData: FormData): Promise<void> {
+/**
+ * One tap, no typing. Names and dates itself from wherever your last week
+ * left off — both are editable on the next screen if you care.
+ */
+export async function addWeek(): Promise<void> {
   await requireAdmin();
-  const week = await db.createWeek({
-    title: str(formData, 'title') || 'New week',
-    start_date: str(formData, 'start_date') || null,
-    note: str(formData, 'note'),
+  const week = await db.createWeek({ ...(await nextWeekSlot()), note: '', published: false });
+  redirect(`/admin/week/${week.id}`);
+}
+
+/**
+ * The fast weekly path: clone last week's workouts, exercises and videos into
+ * a fresh draft, then change whatever needs changing.
+ */
+export async function repeatLastWeek(): Promise<void> {
+  await requireAdmin();
+
+  const weeks = await db.listWeeks();
+  const source = weeks[0];
+  if (!source) redirect('/admin');
+
+  const copy = await db.createWeek({
+    ...(await nextWeekSlot()),
+    note: source.note,
     published: false,
   });
-  redirect(`/admin/week/${week.id}`);
+
+  for (const workout of await db.listWorkouts(source.id)) {
+    const newWorkout = await db.createWorkout({
+      week_id: copy.id,
+      title: workout.title,
+      subtitle: workout.subtitle,
+      position: workout.position,
+    });
+    for (const exercise of await db.listExercises(workout.id)) {
+      await db.createExercise({ ...exercise, workout_id: newWorkout.id });
+    }
+  }
+
+  revalidatePath('/admin');
+  redirect(`/admin/week/${copy.id}`);
 }
 
 export async function saveWeek(formData: FormData): Promise<void> {
@@ -103,8 +136,7 @@ export async function duplicateWeek(formData: FormData): Promise<void> {
   if (!source) return;
 
   const copy = await db.createWeek({
-    title: `${source.title} (copy)`,
-    start_date: null,
+    ...(await nextWeekSlot()),
     note: source.note,
     published: false,
   });
