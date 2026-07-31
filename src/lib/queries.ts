@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import type { Exercise, Week, Workout } from '@/lib/types';
+import { FIRST_CATEGORY, LAST_CATEGORY, type Exercise, type Week, type Workout } from '@/lib/types';
 
 export interface WorkoutProgress {
   workout: Workout;
@@ -44,8 +44,18 @@ export function groupExercises(exercises: Exercise[]): ExerciseGroup[] {
     else groups.push({ category, heading: category || 'Also', exercises: [exercise] });
   }
 
-  // Uncategorised last, however they were ordered.
-  return [...groups.filter((g) => g.category), ...groups.filter((g) => !g.category)];
+  // Warm-up opens, cool-down closes, uncategorised sits just before the
+  // cool-down. Everything else keeps the order the coach arranged.
+  const rank = (g: ExerciseGroup) => {
+    if (g.category === FIRST_CATEGORY) return 0;
+    if (g.category === LAST_CATEGORY) return 3;
+    return g.category ? 1 : 2;
+  };
+
+  return groups
+    .map((group, index) => ({ group, index }))
+    .sort((a, b) => rank(a.group) - rank(b.group) || a.index - b.index)
+    .map(({ group }) => group);
 }
 
 /**
@@ -57,10 +67,71 @@ export function shouldShowGroupHeadings(groups: ExerciseGroup[]): boolean {
 }
 
 /** Monday of the week containing `date`, as yyyy-mm-dd. */
-function mondayOf(date: Date): string {
+export function mondayOf(date: Date): string {
   const copy = new Date(date);
   copy.setDate(copy.getDate() - ((copy.getDay() + 6) % 7));
   return copy.toISOString().slice(0, 10);
+}
+
+/**
+ * "This week" / "Last week" / "Next week" — which is how anyone actually
+ * thinks about it. Anything further out falls back to a date, because
+ * "3 weeks ago" is harder to place than "Week of 6 July".
+ */
+export function relativeWeekLabel(startDate: string | null, today = new Date()): string {
+  if (!startDate) return '';
+
+  const current = new Date(`${mondayOf(today)}T00:00:00`);
+  const start = new Date(`${startDate}T00:00:00`);
+  if (Number.isNaN(start.getTime())) return '';
+
+  const weeksApart = Math.round((start.getTime() - current.getTime()) / (7 * 24 * 60 * 60 * 1000));
+
+  if (weeksApart === 0) return 'This week';
+  if (weeksApart === -1) return 'Last week';
+  if (weeksApart === 1) return 'Next week';
+
+  return `Week of ${new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'long',
+  }).format(start)}`;
+}
+
+export interface WeekNeighbours {
+  current: Week | null;
+  previous: Week | null;
+  next: Week | null;
+}
+
+/**
+ * The week to show plus what sits either side of it, oldest to newest, so the
+ * parent screens can offer plain back/forward navigation.
+ */
+export async function getWeekNeighbours(weekId?: string): Promise<WeekNeighbours> {
+  const weeks = (await db.listWeeks({ publishedOnly: true }))
+    .slice()
+    .sort((a, b) => (a.start_date ?? '').localeCompare(b.start_date ?? ''));
+
+  if (weeks.length === 0) return { current: null, previous: null, next: null };
+
+  const monday = mondayOf(new Date());
+  let index = weekId ? weeks.findIndex((w) => w.id === weekId) : -1;
+
+  if (index === -1) {
+    // Prefer the week we're actually in; otherwise the most recent one that
+    // has already started, so a gap in publishing doesn't show a blank screen.
+    index = weeks.findIndex((w) => w.start_date === monday);
+    if (index === -1) {
+      const started = weeks.filter((w) => (w.start_date ?? '') <= monday);
+      index = started.length ? weeks.indexOf(started[started.length - 1]) : 0;
+    }
+  }
+
+  return {
+    current: weeks[index],
+    previous: weeks[index - 1] ?? null,
+    next: weeks[index + 1] ?? null,
+  };
 }
 
 /**

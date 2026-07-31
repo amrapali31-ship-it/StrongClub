@@ -147,9 +147,10 @@ Exercises carry the category they inherited from the library, and the workout
 page groups by it — Legs, then Core, then Balance. No extra step: pick from the
 library and the sections appear.
 
-Group order follows the order you arranged the exercises, so whichever section
-you put first stays first. Reorder arrows move an exercise **within** its own
-section — crossing a boundary would silently recategorise it.
+**Warm-up** always opens a workout and **Cool-down** always closes it, whatever
+order you added them in. Everything between follows the order you arranged the
+exercises. Reorder arrows move an exercise **within** its own section — crossing
+a boundary would silently recategorise it.
 
 Headings only show when a workout has more than one section; a "Legs" header
 above four leg exercises is noise. One-offs you typed in with no section collect
@@ -188,8 +189,11 @@ invent technique cues for exercises it can't read.
 Roughly a fraction of a penny per import. The review step is not decorative:
 this is exercise guidance for your parents, so read the numbers before publishing.
 
-Whichever published week has the most recent start date is the one shown as
-"this week"; the rest stay reachable under **Earlier weeks**.
+Weeks are labelled by when they are, not what they're called: **Last week**,
+**This week**, **Next week**, with back/forward links between them. Anything
+further out falls back to "Week of 6 July", since "3 weeks ago" is harder to
+place than a date. The week's own title sits underneath as supporting detail —
+which is why not naming them costs you nothing.
 
 ## Layout
 

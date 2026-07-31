@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import type { WorkoutProgress } from '@/lib/queries';
+import { relativeWeekLabel, type WorkoutProgress } from '@/lib/queries';
 import type { Week } from '@/lib/types';
 
 export function formatWeek(week: Week): string {
@@ -13,19 +13,60 @@ export function formatWeek(week: Week): string {
   }).format(date);
 }
 
-export function WeekBoard({ week, board }: { week: Week; board: WorkoutProgress[] }) {
+export function WeekBoard({
+  week,
+  board,
+  previous,
+  next,
+}: {
+  week: Week;
+  board: WorkoutProgress[];
+  previous?: Week | null;
+  next?: Week | null;
+}) {
   const doneCount = board.filter((b) => b.status === 'done').length;
   const dateLabel = formatWeek(week);
+  const relative = relativeWeekLabel(week.start_date);
 
   return (
     <>
+      {(previous || next) && (
+        <nav className="mb-5 flex items-center gap-2">
+          {previous ? (
+            <Link
+              href={`/week/${previous.id}`}
+              className="flex min-h-12 flex-1 items-center justify-center rounded-xl border-2 border-line bg-surface px-3 text-sm font-semibold transition hover:border-brand/60"
+            >
+              ‹ {relativeWeekLabel(previous.start_date) || 'Earlier'}
+            </Link>
+          ) : (
+            <span className="flex-1" />
+          )}
+
+          {next ? (
+            <Link
+              href={`/week/${next.id}`}
+              className="flex min-h-12 flex-1 items-center justify-center rounded-xl border-2 border-line bg-surface px-3 text-sm font-semibold transition hover:border-brand/60"
+            >
+              {relativeWeekLabel(next.start_date) || 'Later'} ›
+            </Link>
+          ) : (
+            <span className="flex-1" />
+          )}
+        </nav>
+      )}
+
       <div className="mb-6">
+        {/* "This week" is what anyone actually wants to know; the title and
+            date are supporting detail. */}
+        <h1 className="text-3xl font-extrabold tracking-tight">
+          {relative || week.title}
+        </h1>
         {dateLabel && (
-          <p className="text-sm font-semibold tracking-wide text-brand uppercase">
-            Week of {dateLabel}
+          <p className="mt-1 text-base text-muted">
+            {relative ? `${week.title} · from ${dateLabel}` : week.title}
           </p>
         )}
-        <h1 className="mt-1 text-3xl font-extrabold tracking-tight">{week.title}</h1>
         {week.note && <p className="mt-3 text-lg leading-relaxed text-muted">{week.note}</p>}
 
         {board.length > 0 && (

@@ -6,6 +6,34 @@
  * `mode: 'time'` entries use `duration`; `mode: 'reps'` entries use `reps`.
  */
 export const LIBRARY = [
+  // --------------------------------------------------------------- Warm-up
+  { name: 'Warm-up march', category: 'Warm-up', mode: 'time', sets: 1, duration: 60, rest: 15,
+    instructions: 'March on the spot, lifting your knees and swinging your arms. Just enough to feel a bit warmer.' },
+  { name: 'Arm swings', category: 'Warm-up', sets: 1, reps: 10, rest: 15,
+    instructions: 'Swing both arms forwards in big circles, then backwards. Loosen the shoulders before you load them.' },
+  { name: 'Leg swings', category: 'Warm-up', sets: 1, reps: 10, rest: 15,
+    instructions: 'Hold a chair. Swing one leg gently forwards and back, then swap. Keep it relaxed, not forced.' },
+  { name: 'Hip circles', category: 'Warm-up', sets: 1, reps: 8, rest: 15,
+    instructions: 'Hands on hips, draw slow circles with your hips. Five one way, five the other.' },
+  { name: 'Torso twists', category: 'Warm-up', sets: 1, reps: 10, rest: 15,
+    instructions: 'Stand tall and rotate your upper body side to side, letting your arms swing loosely.' },
+  { name: 'Ankle rolls', category: 'Warm-up', sets: 1, reps: 10, rest: 15,
+    instructions: 'Hold a chair, lift one foot and roll the ankle in slow circles. Swap feet.' },
+
+  // ------------------------------------------------------------- Cool-down
+  { name: 'Cool-down walk', category: 'Cool-down', mode: 'time', sets: 1, duration: 180, rest: 0,
+    instructions: 'An easy wander until your breathing settles back to normal.' },
+  { name: 'Standing quad stretch', category: 'Cool-down', mode: 'time', sets: 2, duration: 20, rest: 10,
+    instructions: 'Hold a chair, bring one heel towards your bottom and hold. Swap legs. Skip it if your knee objects.' },
+  { name: 'Seated forward fold', category: 'Cool-down', mode: 'time', sets: 2, duration: 30, rest: 10,
+    instructions: 'Sit tall, then hinge forward from the hips and let your hands travel down your shins. Only as far as is comfortable.' },
+  { name: 'Chest opener', category: 'Cool-down', mode: 'time', sets: 2, duration: 20, rest: 10,
+    instructions: 'Clasp your hands behind your back, draw your shoulder blades together and lift gently.' },
+  { name: 'Gentle side bend', category: 'Cool-down', mode: 'time', sets: 2, duration: 20, rest: 10,
+    instructions: 'Reach one arm overhead and lean slowly to the opposite side. Breathe, then swap.' },
+  { name: 'Settling breath', category: 'Cool-down', mode: 'time', sets: 1, duration: 60, rest: 0,
+    instructions: 'Sit down. In through the nose for four, out through the mouth for six. Finish calm.' },
+
   // ------------------------------------------------------------------ Legs
   { name: 'Bodyweight squat', category: 'Legs', sets: 3, reps: 10, rest: 45,
     instructions: 'Feet about shoulder-width apart. Sit your hips back and down as if reaching for a chair, then stand tall. Keep your heels down.' },

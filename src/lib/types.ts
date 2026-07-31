@@ -51,14 +51,23 @@ export interface Exercise {
   created_at: string;
 }
 
+/**
+ * Order matters: warm-up always opens a workout and cool-down always closes
+ * it, whatever order the exercises were added in.
+ */
 export const EXERCISE_CATEGORIES = [
+  'Warm-up',
   'Legs',
   'Upper body',
   'Core',
   'Balance',
   'Mobility',
   'Cardio',
+  'Cool-down',
 ] as const;
+
+export const FIRST_CATEGORY = 'Warm-up';
+export const LAST_CATEGORY = 'Cool-down';
 
 export type ExerciseCategory = (typeof EXERCISE_CATEGORIES)[number];
 

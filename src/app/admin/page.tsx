@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { addProfile, addWeek, removeProfile, repeatLastWeek } from '@/app/admin/actions';
 import { formatWeek } from '@/components/WeekBoard';
 import { db, usingSupabase } from '@/lib/db';
-import { nextWeekSlot } from '@/lib/queries';
+import { nextWeekSlot, relativeWeekLabel } from '@/lib/queries';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,6 +42,7 @@ export default async function AdminHome() {
         <ul className="mt-4 flex flex-col gap-2">
           {weekSummaries.map(({ week, workouts }) => {
             const dateLabel = formatWeek(week);
+            const relative = relativeWeekLabel(week.start_date);
             return (
               <li key={week.id}>
                 <Link
@@ -62,7 +63,8 @@ export default async function AdminHome() {
                       )}
                     </div>
                     <p className="mt-0.5 text-sm text-muted">
-                      {dateLabel && <>Week of {dateLabel} &middot; </>}
+                      {relative && <span className="font-semibold text-ink">{relative} &middot; </span>}
+                      {dateLabel && <>from {dateLabel} &middot; </>}
                       {workouts} {workouts === 1 ? 'workout' : 'workouts'}
                     </p>
                   </div>
