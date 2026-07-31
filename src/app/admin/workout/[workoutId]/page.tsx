@@ -5,9 +5,11 @@ import {
   addExercise,
   addExerciseFromLibrary,
   moveExercise,
+  removeExercise,
   removeWorkout,
   saveWorkout,
 } from '@/app/admin/actions';
+import { DeleteExerciseButton } from '@/components/admin/DeleteExerciseButton';
 import { MediaThumb } from '@/components/MediaFrame';
 import { db } from '@/lib/db';
 import { setsLabel } from '@/lib/media';
@@ -68,7 +70,7 @@ export default async function AdminWorkout({
 
         <ul className="mt-4 flex flex-col gap-2">
           {exercises.map((exercise, i) => (
-            <li key={exercise.id} className="card flex items-center gap-2 p-3">
+            <li key={exercise.id} className="card relative flex items-center gap-2 p-3">
               <div className="flex flex-col">
                 <MoveButton exerciseId={exercise.id} direction="up" disabled={i === 0} />
                 <MoveButton
@@ -84,22 +86,22 @@ export default async function AdminWorkout({
                 name={exercise.name}
               />
 
-              <Link href={`/admin/exercise/${exercise.id}`} className="min-w-0 flex-1">
-                <p className="truncate font-bold">{exercise.name}</p>
+              {/* The whole row is the edit link — a separate "Edit" label was
+                  just stealing width from the name on a phone. */}
+              <Link href={`/admin/exercise/${exercise.id}`} className="min-w-0 flex-1 py-1">
+                <p className="font-bold">{exercise.name}</p>
                 <p className="text-sm text-muted">
                   {setsLabel(exercise)}
                   {exercise.media_type === 'none' && (
-                    <span className="ml-2 text-brand">no video yet</span>
+                    <span className="ml-2 whitespace-nowrap text-brand">no video</span>
                   )}
                 </p>
               </Link>
 
-              <Link
-                href={`/admin/exercise/${exercise.id}`}
-                className="shrink-0 px-2 text-sm font-semibold text-brand"
-              >
-                Edit
-              </Link>
+              <form action={removeExercise} className="shrink-0">
+                <input type="hidden" name="exerciseId" value={exercise.id} />
+                <DeleteExerciseButton name={exercise.name} />
+              </form>
             </li>
           ))}
           {exercises.length === 0 && (
