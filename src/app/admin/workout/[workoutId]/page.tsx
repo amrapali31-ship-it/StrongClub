@@ -4,15 +4,13 @@ import { notFound } from 'next/navigation';
 import {
   addExercise,
   addExerciseFromLibrary,
-  moveExercise,
   removeExercise,
   removeWorkout,
+  reorderExercises,
   saveWorkout,
 } from '@/app/admin/actions';
-import { DeleteExerciseButton } from '@/components/admin/DeleteExerciseButton';
-import { MediaThumb } from '@/components/MediaFrame';
+import { ExerciseReorder } from '@/components/admin/ExerciseReorder';
 import { db } from '@/lib/db';
-import { setsLabel } from '@/lib/media';
 import { groupExercises, shouldShowGroupHeadings } from '@/lib/queries';
 import { EXERCISE_CATEGORIES } from '@/lib/types';
 
@@ -72,55 +70,24 @@ export default async function AdminWorkout({
       <section className="mt-8">
         <h2 className="text-xl font-extrabold tracking-tight">Exercises</h2>
 
-        {groups.map((group) => (
-          <div key={group.category || 'other'} className="mt-4">
-            {showHeadings && (
-              <h3 className="mb-2 text-sm font-bold tracking-widest text-brand uppercase">
-                {group.heading}
-              </h3>
-            )}
-
-            <ul className="flex flex-col gap-2">
-              {group.exercises.map((exercise, i) => (
-                <li key={exercise.id} className="card relative flex items-center gap-2 p-3">
-                  <div className="flex flex-col">
-                    <MoveButton exerciseId={exercise.id} direction="up" disabled={i === 0} />
-                    <MoveButton
-                      exerciseId={exercise.id}
-                      direction="down"
-                      disabled={i === group.exercises.length - 1}
-                    />
-                  </div>
-
-                  <MediaThumb
-                    mediaType={exercise.media_type}
-                    url={exercise.media_url}
-                    name={exercise.name}
-                  />
-
-                  {/* The whole row is the edit link — a separate "Edit" label
-                      was just stealing width from the name on a phone. */}
-                  <Link href={`/admin/exercise/${exercise.id}`} className="min-w-0 flex-1 py-1">
-                    <p className="font-bold">{exercise.name}</p>
-                    <p className="text-sm text-muted">
-                      {setsLabel(exercise)}
-                      {exercise.media_type === 'none' && (
-                        <span className="ml-2 whitespace-nowrap text-brand">no video</span>
-                      )}
-                    </p>
-                  </Link>
-
-                  <form action={removeExercise} className="shrink-0">
-                    <input type="hidden" name="exerciseId" value={exercise.id} />
-                    <DeleteExerciseButton name={exercise.name} />
-                  </form>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-
-        {exercises.length === 0 && <p className="card mt-4 p-4 text-muted">No exercises yet.</p>}
+        {exercises.length > 0 ? (
+          <>
+            <ExerciseReorder
+              workoutId={workout.id}
+              exercises={exercises}
+              groups={groups}
+              showHeadings={showHeadings}
+              reorder={reorderExercises}
+              remove={removeExercise}
+            />
+            <p className="mt-3 text-sm text-muted">
+              Drag the <span className="font-mono text-ink">⠿</span> handle to reorder.
+              {showHeadings && ' Drop an exercise under a different heading to move it there.'}
+            </p>
+          </>
+        ) : (
+          <p className="card mt-4 p-4 text-muted">No exercises yet.</p>
+        )}
 
         {library.length > 0 && (
           <form action={addExerciseFromLibrary} className="card mt-4 flex items-end gap-3 p-4">
@@ -194,27 +161,3 @@ export default async function AdminWorkout({
   );
 }
 
-function MoveButton({
-  exerciseId,
-  direction,
-  disabled,
-}: {
-  exerciseId: string;
-  direction: 'up' | 'down';
-  disabled: boolean;
-}) {
-  return (
-    <form action={moveExercise}>
-      <input type="hidden" name="exerciseId" value={exerciseId} />
-      <input type="hidden" name="direction" value={direction} />
-      <button
-        type="submit"
-        disabled={disabled}
-        aria-label={`Move ${direction}`}
-        className="flex h-6 w-7 items-center justify-center rounded text-muted hover:bg-line disabled:opacity-25"
-      >
-        {direction === 'up' ? '▲' : '▼'}
-      </button>
-    </form>
-  );
-}

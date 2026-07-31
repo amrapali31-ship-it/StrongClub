@@ -147,6 +147,11 @@ Exercises carry the category they inherited from the library, and the workout
 page groups by it — Legs, then Core, then Balance. No extra step: pick from the
 library and the sections appear.
 
+Reorder by dragging the ⠿ handle. Drag only starts from the handle so the list
+still scrolls normally under a thumb; on touch it needs a brief press-and-hold
+for the same reason. Dropping an exercise under a different heading moves it
+into that section.
+
 **Warm-up** always opens a workout and **Cool-down** always closes it, whatever
 order you added them in. Everything between follows the order you arranged the
 exercises. Reorder arrows move an exercise **within** its own section — crossing

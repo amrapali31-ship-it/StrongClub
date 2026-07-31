@@ -8,7 +8,12 @@ import { db } from '@/lib/db';
 import type { DraftWeek } from '@/lib/importer';
 import { detectMediaType } from '@/lib/media';
 import { nextWeekSlot } from '@/lib/queries';
-import { EXERCISE_CATEGORIES, type ExerciseMode, type MediaType } from '@/lib/types';
+import {
+  EXERCISE_CATEGORIES,
+  type Exercise,
+  type ExerciseMode,
+  type MediaType,
+} from '@/lib/types';
 
 async function requireAdmin(): Promise<void> {
   if (!(await isAdmin())) redirect('/admin');
@@ -442,26 +447,40 @@ export async function removeExercise(formData: FormData): Promise<void> {
   redirect('/admin');
 }
 
-export async function moveExercise(formData: FormData): Promise<void> {
+/**
+ * Persists a drag-and-drop reorder in one go: the client sends the exercises in
+ * their new visual order, each already tagged with the section it was dropped
+ * into, and positions are reassigned from that order.
+ */
+export async function reorderExercises(formData: FormData): Promise<void> {
   await requireAdmin();
-  const id = str(formData, 'exerciseId');
-  const direction = str(formData, 'direction') === 'up' ? -1 : 1;
+  const workoutId = str(formData, 'workoutId');
 
-  const exercise = await db.getExercise(id);
-  if (!exercise) return;
+  let order: { id: string; category: string }[];
+  try {
+    order = JSON.parse(str(formData, 'order')) as { id: string; category: string }[];
+  } catch {
+    return;
+  }
 
-  // Move within the exercise's own sub-section — swapping across a group
-  // boundary would silently recategorise it.
-  const siblings = (await db.listExercises(exercise.workout_id)).filter(
-    (e) => (e.category ?? '') === (exercise.category ?? ''),
+  // Only touch exercises that actually belong to this workout, so a stale or
+  // tampered payload can't reach across into another one.
+  const existing = await db.listExercises(workoutId);
+  const byId = new Map(existing.map((e) => [e.id, e]));
+
+  await Promise.all(
+    order
+      .filter((entry) => byId.has(entry.id))
+      .map((entry, index) => {
+        const current = byId.get(entry.id)!;
+        const category = entry.category ?? '';
+        if (current.position === index && (current.category ?? '') === category) return null;
+        return db.updateExercise(entry.id, { position: index, category });
+      })
+      .filter((p): p is Promise<Exercise> => p !== null),
   );
-  const index = siblings.findIndex((e) => e.id === id);
-  const swapWith = siblings[index + direction];
-  if (!swapWith) return;
 
-  await db.updateExercise(exercise.id, { position: swapWith.position });
-  await db.updateExercise(swapWith.id, { position: exercise.position });
-
-  revalidatePath(`/admin/workout/${exercise.workout_id}`);
+  revalidatePath(`/admin/workout/${workoutId}`);
   revalidatePath('/home');
 }
+

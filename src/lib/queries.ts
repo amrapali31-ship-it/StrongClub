@@ -59,6 +59,29 @@ export function groupExercises(exercises: Exercise[]): ExerciseGroup[] {
 }
 
 /**
+ * Reads the section for each exercise off the heading above it, after a drag
+ * has rearranged the list. Pulled out of the component so the rule that
+ * decides "which section did this land in" can be tested on its own.
+ *
+ * Anything dropped above the very first heading joins that first section —
+ * dragging to the top should mean "put it first", not "strip its section".
+ */
+export function readOrderFromRows(
+  rows: { kind: 'heading' | 'exercise'; id: string; category: string }[],
+  showHeadings: boolean,
+): { id: string; category: string }[] {
+  const order: { id: string; category: string }[] = [];
+  let current = rows.find((r) => r.kind === 'heading')?.category ?? '';
+
+  for (const row of rows) {
+    if (row.kind === 'heading') current = row.category;
+    else order.push({ id: row.id, category: showHeadings ? current : row.category });
+  }
+
+  return order;
+}
+
+/**
  * Headings only earn their space when there's more than one section — a "Legs"
  * header above a workout that is entirely legs is just noise.
  */
