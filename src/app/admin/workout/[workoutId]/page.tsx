@@ -1,10 +1,17 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
-import { addExercise, moveExercise, removeWorkout, saveWorkout } from '@/app/admin/actions';
+import {
+  addExercise,
+  addExerciseFromLibrary,
+  moveExercise,
+  removeWorkout,
+  saveWorkout,
+} from '@/app/admin/actions';
 import { MediaThumb } from '@/components/MediaFrame';
 import { db } from '@/lib/db';
 import { setsLabel } from '@/lib/media';
+import { EXERCISE_CATEGORIES } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,7 +25,10 @@ export default async function AdminWorkout({
   const workout = await db.getWorkout(workoutId);
   if (!workout) notFound();
 
-  const exercises = await db.listExercises(workout.id);
+  const [exercises, library] = await Promise.all([
+    db.listExercises(workout.id),
+    db.listLibrary(),
+  ]);
 
   return (
     <>
@@ -97,11 +107,44 @@ export default async function AdminWorkout({
           )}
         </ul>
 
-        <form action={addExercise} className="card mt-4 flex items-end gap-3 p-4">
+        {library.length > 0 && (
+          <form action={addExerciseFromLibrary} className="card mt-4 flex items-end gap-3 p-4">
+            <input type="hidden" name="workoutId" value={workout.id} />
+            <div className="min-w-0 flex-1">
+              <label htmlFor="libraryId" className="label">
+                Add from your library
+              </label>
+              <select id="libraryId" name="libraryId" className="field" defaultValue="">
+                <option value="" disabled>
+                  Pick an exercise…
+                </option>
+                {EXERCISE_CATEGORIES.map((category) => {
+                  const items = library.filter((e) => e.category === category);
+                  if (items.length === 0) return null;
+                  return (
+                    <optgroup key={category} label={category}>
+                      {items.map((exercise) => (
+                        <option key={exercise.id} value={exercise.id}>
+                          {exercise.name}
+                          {exercise.media_type === 'none' ? '' : ' 🎬'}
+                        </option>
+                      ))}
+                    </optgroup>
+                  );
+                })}
+              </select>
+            </div>
+            <button type="submit" className="btn-primary shrink-0 text-base">
+              Add
+            </button>
+          </form>
+        )}
+
+        <form action={addExercise} className="card mt-3 flex items-end gap-3 p-4">
           <input type="hidden" name="workoutId" value={workout.id} />
           <div className="flex-1">
             <label htmlFor="exercise-name" className="label">
-              Add an exercise
+              {library.length > 0 ? 'Or add a one-off' : 'Add an exercise'}
             </label>
             <input
               id="exercise-name"
@@ -110,10 +153,20 @@ export default async function AdminWorkout({
               className="field"
             />
           </div>
-          <button type="submit" className="btn-primary shrink-0 text-base">
+          <button type="submit" className="btn-secondary shrink-0 text-base">
             Add
           </button>
         </form>
+
+        {library.length === 0 && (
+          <p className="mt-3 text-sm text-muted">
+            Tip: build up your{' '}
+            <Link href="/admin/library" className="font-semibold text-brand">
+              exercise library
+            </Link>{' '}
+            and you can pick from it here instead of retyping.
+          </p>
+        )}
       </section>
 
       <form action={removeWorkout} className="mt-10 border-t border-line pt-6">

@@ -6,6 +6,7 @@ import type {
   Database,
   Exercise,
   ExerciseCompletion,
+  LibraryExercise,
   Profile,
   Week,
   Workout,
@@ -16,6 +17,7 @@ interface Shape {
   weeks: Week[];
   workouts: Workout[];
   exercises: Exercise[];
+  library: LibraryExercise[];
   completions: ExerciseCompletion[];
 }
 
@@ -24,6 +26,7 @@ const EMPTY: Shape = {
   weeks: [],
   workouts: [],
   exercises: [],
+  library: [],
   completions: [],
 };
 
@@ -258,6 +261,52 @@ export const localDb: Database = {
     await mutate((d) => {
       d.exercises = d.exercises.filter((e) => e.id !== id);
       d.completions = d.completions.filter((c) => c.exercise_id !== id);
+    });
+  },
+
+  async listLibrary() {
+    return query((d) => [...d.library].sort((a, b) => a.name.localeCompare(b.name)));
+  },
+
+  async getLibraryExercise(id) {
+    return query((d) => d.library.find((e) => e.id === id) ?? null);
+  },
+
+  async createLibraryExercise(data) {
+    return mutate((d) => {
+      const entry: LibraryExercise = {
+        id: randomUUID(),
+        name: data.name,
+        category: data.category,
+        instructions: data.instructions ?? '',
+        mode: data.mode ?? 'reps',
+        sets: data.sets ?? 2,
+        reps: data.reps ?? 10,
+        duration_seconds: data.duration_seconds ?? null,
+        rest_seconds: data.rest_seconds ?? 30,
+        media_type: data.media_type ?? 'none',
+        media_url: data.media_url ?? '',
+        created_at: new Date().toISOString(),
+      };
+      d.library.push(entry);
+      return entry;
+    });
+  },
+
+  async updateLibraryExercise(id, patch) {
+    return mutate((d) => {
+      const entry = must(
+        d.library.find((e) => e.id === id),
+        'Library exercise',
+      );
+      Object.assign(entry, patch, { id: entry.id });
+      return entry;
+    });
+  },
+
+  async deleteLibraryExercise(id) {
+    await mutate((d) => {
+      d.library = d.library.filter((e) => e.id !== id);
     });
   },
 

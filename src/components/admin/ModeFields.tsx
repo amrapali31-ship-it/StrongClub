@@ -2,10 +2,19 @@
 
 import { useState } from 'react';
 
-import type { Exercise, ExerciseMode } from '@/lib/types';
+import type { ExerciseMode } from '@/lib/types';
+
+/** The numeric fields shared by workout exercises and library entries. */
+interface ModeFieldsSource {
+  mode: ExerciseMode;
+  sets: number;
+  reps: number | null;
+  duration_seconds: number | null;
+  rest_seconds: number;
+}
 
 /** Reps or a hold — switching swaps which number the coach fills in. */
-export function ModeFields({ exercise }: { exercise: Exercise }) {
+export function ModeFields({ exercise }: { exercise: ModeFieldsSource }) {
   const [mode, setMode] = useState<ExerciseMode>(exercise.mode);
 
   return (

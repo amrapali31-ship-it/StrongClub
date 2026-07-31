@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-import type { Database, Exercise, Profile, Week, Workout } from '@/lib/types';
+import type { Database, Exercise, LibraryExercise, Profile, Week, Workout } from '@/lib/types';
 
 let cached: SupabaseClient | null = null;
 
@@ -203,6 +203,55 @@ export const supabaseDb: Database = {
   async deleteExercise(id) {
     const sb = supabaseAdmin();
     const { error } = await sb.from('exercises').delete().eq('id', id);
+    if (error) throw new Error(error.message);
+  },
+
+  async listLibrary() {
+    const sb = supabaseAdmin();
+    return unwrap(await sb.from('library_exercises').select('*').order('name'));
+  },
+
+  async getLibraryExercise(id) {
+    const sb = supabaseAdmin();
+    const { data, error } = await sb
+      .from('library_exercises')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return (data as LibraryExercise) ?? null;
+  },
+
+  async createLibraryExercise(data) {
+    const sb = supabaseAdmin();
+    return unwrap(
+      await sb
+        .from('library_exercises')
+        .insert({
+          name: data.name,
+          category: data.category,
+          instructions: data.instructions ?? '',
+          mode: data.mode ?? 'reps',
+          sets: data.sets ?? 2,
+          reps: data.reps ?? 10,
+          duration_seconds: data.duration_seconds ?? null,
+          rest_seconds: data.rest_seconds ?? 30,
+          media_type: data.media_type ?? 'none',
+          media_url: data.media_url ?? '',
+        })
+        .select()
+        .single(),
+    );
+  },
+
+  async updateLibraryExercise(id, patch) {
+    const sb = supabaseAdmin();
+    return unwrap(await sb.from('library_exercises').update(patch).eq('id', id).select().single());
+  },
+
+  async deleteLibraryExercise(id) {
+    const sb = supabaseAdmin();
+    const { error } = await sb.from('library_exercises').delete().eq('id', id);
     if (error) throw new Error(error.message);
   },
 

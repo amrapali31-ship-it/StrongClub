@@ -46,6 +46,37 @@ export interface Exercise {
   created_at: string;
 }
 
+export const EXERCISE_CATEGORIES = [
+  'Legs',
+  'Upper body',
+  'Core',
+  'Balance',
+  'Mobility',
+  'Cardio',
+] as const;
+
+export type ExerciseCategory = (typeof EXERCISE_CATEGORIES)[number];
+
+/**
+ * A reusable movement. Workouts copy from these rather than referencing them,
+ * so editing a library entry never rewrites a week your parents already did —
+ * but new workouts inherit its defaults and, importantly, its video.
+ */
+export interface LibraryExercise {
+  id: string;
+  name: string;
+  category: string;
+  instructions: string;
+  mode: ExerciseMode;
+  sets: number;
+  reps: number | null;
+  duration_seconds: number | null;
+  rest_seconds: number;
+  media_type: MediaType;
+  media_url: string;
+  created_at: string;
+}
+
 export interface ExerciseCompletion {
   id: string;
   profile_id: string;
@@ -90,6 +121,14 @@ export interface Database {
   createExercise(data: Partial<Exercise> & { workout_id: string; name: string }): Promise<Exercise>;
   updateExercise(id: string, patch: Partial<Exercise>): Promise<Exercise>;
   deleteExercise(id: string): Promise<void>;
+
+  listLibrary(): Promise<LibraryExercise[]>;
+  getLibraryExercise(id: string): Promise<LibraryExercise | null>;
+  createLibraryExercise(
+    data: Partial<LibraryExercise> & { name: string; category: string },
+  ): Promise<LibraryExercise>;
+  updateLibraryExercise(id: string, patch: Partial<LibraryExercise>): Promise<LibraryExercise>;
+  deleteLibraryExercise(id: string): Promise<void>;
 
   listCompletions(filter?: CompletionFilter): Promise<ExerciseCompletion[]>;
   setExerciseDone(profileId: string, exerciseId: string, done: boolean): Promise<void>;

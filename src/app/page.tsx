@@ -55,8 +55,22 @@ export default async function ProfilePicker() {
         </div>
       )}
 
-      <Link href="/admin" className="btn-ghost mt-10 text-sm">
-        Admin
+      {/* Your own way in. Fine for your parents to see — it asks for the
+          passcode, and they have no reason to tap it. */}
+      <Link
+        href="/admin"
+        className="mt-8 flex items-center gap-4 rounded-xl2 border-2 border-dashed border-line p-4 text-left transition hover:border-brand/50"
+      >
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-tint text-xl">
+          🏋️
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-bold">Coach</span>
+          <span className="block text-sm text-muted">Build workouts &middot; passcode needed</span>
+        </span>
+        <span className="text-2xl text-muted/50" aria-hidden>
+          &rsaquo;
+        </span>
       </Link>
     </main>
   );

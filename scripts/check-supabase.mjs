@@ -9,7 +9,14 @@ import { loadEnv, supabaseFromEnv } from './supabase-env.mjs';
 
 loadEnv();
 
-const TABLES = ['profiles', 'weeks', 'workouts', 'exercises', 'exercise_completions'];
+const TABLES = [
+  'profiles',
+  'weeks',
+  'workouts',
+  'exercises',
+  'library_exercises',
+  'exercise_completions',
+];
 const BUCKET = 'workout-media';
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

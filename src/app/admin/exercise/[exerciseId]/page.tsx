@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
-import { removeExercise, saveExercise } from '@/app/admin/actions';
+import { removeExercise, saveExercise, saveExerciseToLibrary } from '@/app/admin/actions';
 import { MediaPicker } from '@/components/admin/MediaPicker';
 import { ModeFields } from '@/components/admin/ModeFields';
 import { db } from '@/lib/db';
+import { EXERCISE_CATEGORIES } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,6 +62,27 @@ export default async function AdminExercise({
 
         <button type="submit" className="btn-primary mt-6 w-full">
           Save exercise
+        </button>
+      </form>
+
+      <form action={saveExerciseToLibrary} className="card mt-6 flex flex-col gap-3 p-4 sm:flex-row sm:items-end">
+        <input type="hidden" name="exerciseId" value={exercise.id} />
+        <div className="min-w-0 flex-1">
+          <p className="label">Reuse this later</p>
+          <p className="text-sm text-muted">
+            Saves this exercise &mdash; video and all &mdash; to your library. Save it again after
+            edits to update the stored version.
+          </p>
+        </div>
+        <select name="category" defaultValue={EXERCISE_CATEGORIES[0]} className="field sm:w-40">
+          {EXERCISE_CATEGORIES.map((category) => (
+            <option key={category} value={category}>
+              {category}
+            </option>
+          ))}
+        </select>
+        <button type="submit" className="btn-secondary shrink-0 text-base">
+          Save to library
         </button>
       </form>
 

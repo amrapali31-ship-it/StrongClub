@@ -7,7 +7,7 @@ import { checkPasscode, isAdmin, signInAdmin, signOutAdmin } from '@/lib/auth';
 import { db } from '@/lib/db';
 import type { DraftWeek } from '@/lib/importer';
 import { detectMediaType } from '@/lib/media';
-import type { ExerciseMode, MediaType } from '@/lib/types';
+import { EXERCISE_CATEGORIES, type ExerciseMode, type MediaType } from '@/lib/types';
 
 async function requireAdmin(): Promise<void> {
   if (!(await isAdmin())) redirect('/admin');
@@ -236,6 +236,116 @@ export async function moveWorkout(formData: FormData): Promise<void> {
 
   revalidatePath(`/admin/week/${workout.week_id}`);
   revalidatePath('/home');
+}
+
+/* ---------------------------------------------------------------- library */
+
+export async function addLibraryExercise(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const name = str(formData, 'name');
+  if (!name) redirect('/admin/library');
+
+  const entry = await db.createLibraryExercise({
+    name,
+    category: str(formData, 'category') || EXERCISE_CATEGORIES[0],
+  });
+  redirect(`/admin/library/${entry.id}`);
+}
+
+export async function saveLibraryExercise(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = str(formData, 'libraryId');
+  const mode = (str(formData, 'mode') === 'time' ? 'time' : 'reps') as ExerciseMode;
+
+  const mediaUrl = str(formData, 'media_url');
+  const declaredType = str(formData, 'media_type') as MediaType;
+  const mediaType: MediaType = mediaUrl
+    ? declaredType === 'video' || declaredType === 'image'
+      ? declaredType
+      : detectMediaType(mediaUrl)
+    : 'none';
+
+  await db.updateLibraryExercise(id, {
+    name: str(formData, 'name') || 'Untitled exercise',
+    category: str(formData, 'category') || EXERCISE_CATEGORIES[0],
+    instructions: str(formData, 'instructions'),
+    mode,
+    sets: Math.max(1, Math.round(num(formData, 'sets', 1))),
+    reps: mode === 'reps' ? Math.max(1, Math.round(num(formData, 'reps', 10))) : null,
+    duration_seconds:
+      mode === 'time' ? Math.max(1, Math.round(num(formData, 'duration_seconds', 30))) : null,
+    rest_seconds: Math.max(0, Math.round(num(formData, 'rest_seconds', 30))),
+    media_type: mediaType,
+    media_url: mediaUrl,
+  });
+
+  revalidatePath('/admin/library');
+  redirect('/admin/library');
+}
+
+export async function removeLibraryExercise(formData: FormData): Promise<void> {
+  await requireAdmin();
+  await db.deleteLibraryExercise(str(formData, 'libraryId'));
+  revalidatePath('/admin/library');
+  redirect('/admin/library');
+}
+
+/**
+ * Copies a library entry into a workout — including its video. The workout gets
+ * its own independent copy, so later edits to either side don't affect the other.
+ */
+export async function addExerciseFromLibrary(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const workoutId = str(formData, 'workoutId');
+  const source = await db.getLibraryExercise(str(formData, 'libraryId'));
+  if (!source) redirect(`/admin/workout/${workoutId}`);
+
+  await db.createExercise({
+    workout_id: workoutId,
+    name: source.name,
+    instructions: source.instructions,
+    mode: source.mode,
+    sets: source.sets,
+    reps: source.reps,
+    duration_seconds: source.duration_seconds,
+    rest_seconds: source.rest_seconds,
+    media_type: source.media_type,
+    media_url: source.media_url,
+  });
+
+  revalidatePath(`/admin/workout/${workoutId}`);
+  revalidatePath('/home');
+}
+
+/** Pushes a workout exercise back into the library so it can be reused. */
+export async function saveExerciseToLibrary(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const exercise = await db.getExercise(str(formData, 'exerciseId'));
+  if (!exercise) redirect('/admin');
+
+  const existing = (await db.listLibrary()).find(
+    (entry) => entry.name.toLowerCase() === exercise.name.trim().toLowerCase(),
+  );
+
+  const payload = {
+    name: exercise.name,
+    category: str(formData, 'category') || EXERCISE_CATEGORIES[0],
+    instructions: exercise.instructions,
+    mode: exercise.mode,
+    sets: exercise.sets,
+    reps: exercise.reps,
+    duration_seconds: exercise.duration_seconds,
+    rest_seconds: exercise.rest_seconds,
+    media_type: exercise.media_type,
+    media_url: exercise.media_url,
+  };
+
+  // Same name means "update my saved version", not "make a near-duplicate".
+  if (existing) await db.updateLibraryExercise(existing.id, payload);
+  else await db.createLibraryExercise(payload);
+
+  revalidatePath('/admin/library');
+  redirect(`/admin/exercise/${exercise.id}?saved=library`);
 }
 
 /* -------------------------------------------------------------- exercises */

@@ -45,6 +45,24 @@ create table if not exists exercises (
   created_at timestamptz not null default now()
 );
 
+-- Reusable movements you pick from when building a workout. Workouts copy
+-- these rather than referencing them, so editing one never rewrites a past week.
+create table if not exists library_exercises (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  category text not null default 'Legs',
+  instructions text not null default '',
+  mode text not null default 'reps' check (mode in ('reps', 'time')),
+  sets integer not null default 2,
+  reps integer,
+  duration_seconds integer,
+  rest_seconds integer not null default 30,
+  media_type text not null default 'none' check (media_type in ('none', 'youtube', 'video', 'image')),
+  media_url text not null default '',
+  created_at timestamptz not null default now(),
+  unique (name)
+);
+
 create table if not exists exercise_completions (
   id uuid primary key default gen_random_uuid(),
   profile_id uuid not null references profiles (id) on delete cascade,
@@ -67,6 +85,7 @@ alter table profiles enable row level security;
 alter table weeks enable row level security;
 alter table workouts enable row level security;
 alter table exercises enable row level security;
+alter table library_exercises enable row level security;
 alter table exercise_completions enable row level security;
 
 -- Public bucket for exercise photos and clips.

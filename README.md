@@ -111,6 +111,33 @@ don't put anything sensitive in the exercise notes.
 **Duplicate this week** on a week page copies everything — workouts, exercises,
 media — as a fresh draft, which is the fast way to build next week from this one.
 
+## Exercise library
+
+`/admin/library` holds your reusable movements, grouped by category. When you
+build a workout you pick from this list instead of retyping, and the exercise is
+**copied** into that workout — sets, reps, rest, instructions and video.
+
+Copy rather than reference is deliberate: adjusting reps for one week never
+rewrites a week your parents already finished, and editing a library entry never
+changes history.
+
+The payoff is media. Attach a YouTube link to "Squat" once here, and every future
+workout built from it arrives with the video already on it.
+
+```bash
+npm run seed:library
+```
+
+Adds ~70 standard movements — squats, deadlifts, lunges, presses, rows, planks,
+balance work, stretches, cardio — which you can then edit or delete. Safe to
+re-run and safe on a live database: it only adds names that aren't already
+there, so your own edits are never touched.
+
+Two other routes into the library: **Save to library** at the bottom of any
+workout exercise pushes it back for reuse (saving under a name that already
+exists updates that entry rather than making a near-duplicate), and you can add
+entries by hand at the top of the library page.
+
 ## Importing a week with AI
 
 `/admin/import` takes a pasted plan, photos, or both, and drafts a whole week —
