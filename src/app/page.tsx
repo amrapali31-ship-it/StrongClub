@@ -1,65 +1,63 @@
-import Image from "next/image";
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
 
-export default function Home() {
+import { chooseProfile } from '@/app/actions';
+import { getActiveProfileId } from '@/lib/auth';
+import { db } from '@/lib/db';
+
+export const dynamic = 'force-dynamic';
+
+export default async function ProfilePicker() {
+  const active = await getActiveProfileId();
+  if (active && (await db.getProfile(active))) redirect('/home');
+
+  const profiles = await db.listProfiles();
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-6 py-16">
+      <div className="mb-10 text-center">
+        <h1 className="text-4xl font-extrabold tracking-tight">StrongClub</h1>
+        <p className="mt-3 text-lg text-muted">Who&rsquo;s working out today?</p>
+      </div>
+
+      {profiles.length === 0 ? (
+        <div className="card p-6 text-center">
+          <p className="text-lg font-semibold">No one set up yet</p>
+          <p className="mt-2 text-muted">
+            Head to the admin area to add the people who&rsquo;ll be using this.
           </p>
+          <Link href="/admin" className="btn-primary mt-6 w-full">
+            Open admin
+          </Link>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {profiles.map((profile) => (
+            <form key={profile.id} action={chooseProfile}>
+              <input type="hidden" name="profileId" value={profile.id} />
+              <button
+                type="submit"
+                className="card flex w-full items-center gap-4 p-4 text-left transition hover:border-ink/25 active:scale-[0.99]"
+              >
+                <span
+                  className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-xl font-bold text-white"
+                  style={{ backgroundColor: profile.color }}
+                >
+                  {profile.name.slice(0, 1).toUpperCase()}
+                </span>
+                <span className="text-xl font-semibold">{profile.name}</span>
+                <span className="ml-auto text-2xl text-muted/50" aria-hidden>
+                  &rsaquo;
+                </span>
+              </button>
+            </form>
+          ))}
         </div>
-      </main>
-    </div>
+      )}
+
+      <Link href="/admin" className="btn-ghost mt-10 text-sm">
+        Admin
+      </Link>
+    </main>
   );
 }

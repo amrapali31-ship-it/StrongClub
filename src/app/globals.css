@@ -1,26 +1,71 @@
-@import "tailwindcss";
+@import 'tailwindcss';
+
+@theme {
+  --color-cream: #f7f3ec;
+  --color-surface: #ffffff;
+  --color-ink: #1b1917;
+  --color-muted: #6f665c;
+  --color-line: #e5ded2;
+  --color-brand: #d6552b;
+  --color-brand-dark: #b8441f;
+  --color-brand-tint: #fbeae2;
+  --color-success: #2e7d53;
+  --color-success-tint: #e3f2e9;
+
+  --font-sans:
+    ui-rounded, 'SF Pro Rounded', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui,
+    sans-serif;
+
+  --radius-xl2: 1.25rem;
+}
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Older eyes, phone in hand: light theme only, deliberately. */
+  color-scheme: light;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-cream);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  overscroll-behavior-y: none;
+}
+
+@layer components {
+  /* Tailwind v4 can't @apply a custom class, so each variant restates the
+     shared button shape rather than composing on top of `.btn`. */
+  .btn,
+  .btn-primary,
+  .btn-secondary,
+  .btn-ghost {
+    @apply inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl px-6 text-lg font-semibold transition active:scale-[0.98];
+  }
+
+  .btn-primary {
+    @apply bg-brand text-white shadow-sm hover:bg-brand-dark;
+  }
+
+  .btn-secondary {
+    @apply border-2 border-line bg-surface text-ink hover:border-ink/30;
+  }
+
+  .btn-ghost {
+    @apply text-muted hover:text-ink;
+  }
+
+  .card {
+    @apply rounded-xl2 border border-line bg-surface;
+  }
+
+  .field {
+    @apply w-full rounded-xl border-2 border-line bg-surface px-4 py-3 text-base text-ink outline-none placeholder:text-muted/60 focus:border-brand;
+  }
+
+  .label {
+    @apply mb-1.5 block text-sm font-semibold text-muted;
+  }
 }
