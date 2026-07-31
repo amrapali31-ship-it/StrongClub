@@ -4,8 +4,24 @@ import { useActionState } from 'react';
 
 import { login } from '@/app/admin/actions';
 
-export function LoginForm() {
+export function LoginForm({ passcodeIsSet }: { passcodeIsSet: boolean }) {
   const [error, action, pending] = useActionState(login, null);
+
+  if (!passcodeIsSet) {
+    return (
+      <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-16">
+        <h1 className="text-center text-3xl font-extrabold tracking-tight">Admin is locked</h1>
+        <p className="mt-4 text-center text-lg text-muted">
+          No <code className="font-mono text-base">ADMIN_PASSCODE</code> is set on this deployment,
+          so nobody can sign in.
+        </p>
+        <p className="mt-4 text-center text-muted">
+          Set it in your hosting provider&rsquo;s environment variables and redeploy. The workouts
+          themselves are unaffected.
+        </p>
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-16">

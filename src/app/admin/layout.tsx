@@ -2,12 +2,12 @@ import Link from 'next/link';
 
 import { logout } from '@/app/admin/actions';
 import { LoginForm } from '@/app/admin/LoginForm';
-import { isAdmin } from '@/lib/auth';
+import { adminPasscodeIsSet, isAdmin } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  if (!(await isAdmin())) return <LoginForm />;
+  if (!(await isAdmin())) return <LoginForm passcodeIsSet={adminPasscodeIsSet()} />;
 
   return (
     <>
