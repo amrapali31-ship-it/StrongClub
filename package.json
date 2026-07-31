@@ -10,7 +10,8 @@
     "seed": "node scripts/seed.mjs",
     "check:supabase": "node scripts/check-supabase.mjs",
     "seed:library": "node scripts/seed-library.mjs",
-    "backfill:categories": "node scripts/backfill-categories.mjs"
+    "backfill:categories": "node scripts/backfill-categories.mjs",
+    "icons": "node scripts/build-icons.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",

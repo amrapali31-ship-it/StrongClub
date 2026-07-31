@@ -235,6 +235,22 @@ contrast, not darkness. Every pairing here clears WCAG AA by a wide margin
 pink rather than white-on-pink, which would have been the weakest pairing on the
 page. Hover goes *brighter*, not darker — darker reads as disabled on a dark UI.
 
+## Changing the logo
+
+The mark is one file: [`src/app/icon.svg`](src/app/icon.svg). Edit it — or drop
+in any square SVG — then regenerate the raster sizes:
+
+```bash
+npm run icons
+```
+
+That writes `src/app/apple-icon.png` (iOS home screen, which ignores SVG) and
+`public/icon-192.png` / `icon-512.png` (referenced by the web manifest). Next
+links the SVG for the browser tab automatically from its filename.
+
+Check it at 32px before committing — a mark that reads well large can turn to
+mush in a tab.
+
 ## Checks
 
 ```bash
