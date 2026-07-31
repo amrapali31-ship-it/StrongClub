@@ -59,6 +59,32 @@ export function formatDuration(seconds: number): string {
   return rest ? `${mins} min ${rest} sec` : `${mins} min`;
 }
 
+/* ------------------------------------------------------------ uploads ---- */
+
+/** 100 MB — comfortably above a two-minute phone clip, below Supabase limits. */
+export const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
+
+/**
+ * What the upload endpoint accepts. Lives here rather than in `storage.ts` so
+ * the browser can check a dropped file before spending minutes uploading
+ * something the server was always going to reject.
+ */
+export const ALLOWED_UPLOAD_TYPES =
+  /^(image\/(png|jpeg|gif|webp|avif)|video\/(mp4|quicktime|webm))$/;
+
+/** Returns a human-readable problem with the file, or null if it's fine. */
+export function checkUpload(file: { name: string; size: number; type: string }): string | null {
+  if (!file.size) return `${file.name} is empty.`;
+  if (file.size > MAX_UPLOAD_BYTES) {
+    const mb = Math.round(file.size / 1024 / 1024);
+    return `${file.name} is ${mb} MB — keep uploads under ${MAX_UPLOAD_BYTES / 1024 / 1024} MB.`;
+  }
+  if (!ALLOWED_UPLOAD_TYPES.test(file.type)) {
+    return 'Only images (png, jpg, gif, webp) and videos (mp4, mov, webm) can be uploaded.';
+  }
+  return null;
+}
+
 /** "12 reps" / "45 sec" — the headline number on the exercise screen. */
 export function targetLabel(exercise: {
   mode: ExerciseMode;

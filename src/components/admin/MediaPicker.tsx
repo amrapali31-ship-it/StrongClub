@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 
 import { MediaFrame } from '@/components/MediaFrame';
-import { youTubeId } from '@/lib/media';
+import { checkUpload, youTubeId } from '@/lib/media';
 import type { MediaType } from '@/lib/types';
 
 type Source = 'none' | 'youtube' | 'upload';
@@ -29,6 +29,8 @@ export function MediaPicker({ name, defaultUrl, defaultType }: Props) {
   const [url, setUrl] = useState(defaultUrl);
   const [mediaType, setMediaType] = useState<MediaType>(defaultType);
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -36,30 +38,83 @@ export function MediaPicker({ name, defaultUrl, defaultType }: Props) {
   const effectiveType: MediaType =
     source === 'none' ? 'none' : source === 'youtube' ? 'youtube' : mediaType;
 
-  async function upload(file: File) {
+  function upload(file: File) {
+    const problem = checkUpload(file);
+    if (problem) {
+      setError(problem);
+      return;
+    }
+
     setUploading(true);
     setError(null);
-    try {
-      const body = new FormData();
-      body.append('file', file);
-      const response = await fetch('/api/upload', { method: 'POST', body });
-      const data = (await response.json()) as { url?: string; mediaType?: MediaType; error?: string };
+    setProgress(0);
 
-      if (!response.ok || !data.url) throw new Error(data.error ?? 'Upload failed.');
+    // XHR rather than fetch: a phone video can take a while over mobile data,
+    // and fetch can't report how far along an upload is.
+    const request = new XMLHttpRequest();
+    const body = new FormData();
+    body.append('file', file);
 
-      setUrl(data.url);
-      setMediaType(data.mediaType ?? 'image');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed.');
-    } finally {
+    request.upload.addEventListener('progress', (event) => {
+      if (event.lengthComputable) setProgress(Math.round((event.loaded / event.total) * 100));
+    });
+
+    request.addEventListener('load', () => {
       setUploading(false);
-    }
+      try {
+        const data = JSON.parse(request.responseText) as {
+          url?: string;
+          mediaType?: MediaType;
+          error?: string;
+        };
+        if (request.status >= 400 || !data.url) throw new Error(data.error ?? 'Upload failed.');
+        setUrl(data.url);
+        setMediaType(data.mediaType ?? 'image');
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Upload failed.');
+      }
+    });
+
+    request.addEventListener('error', () => {
+      setUploading(false);
+      setError('Upload failed — check your connection and try again.');
+    });
+
+    request.open('POST', '/api/upload');
+    request.send(body);
+  }
+
+  function handleDrop(event: React.DragEvent) {
+    event.preventDefault();
+    setDragging(false);
+    if (uploading) return;
+
+    const file = event.dataTransfer.files?.[0];
+    if (!file) return;
+
+    setSource('upload');
+    upload(file);
   }
 
   const youTubeValid = source !== 'youtube' || !url.trim() || Boolean(youTubeId(url));
 
   return (
-    <div>
+    <div
+      // Drops are accepted anywhere in this block, not just on the upload tab —
+      // dropping a video is a clear enough intent to switch to it.
+      onDragOver={(e) => {
+        e.preventDefault();
+        if (!uploading) setDragging(true);
+      }}
+      onDragLeave={(e) => {
+        // Ignore the leave events fired when crossing between children.
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragging(false);
+      }}
+      onDrop={handleDrop}
+      className={
+        dragging && source !== 'upload' ? 'rounded-xl2 ring-2 ring-brand ring-offset-4 ring-offset-surface' : ''
+      }
+    >
       <span className="label">Video or photo demo</span>
 
       <input type="hidden" name="media_url" value={effectiveUrl} />
@@ -119,21 +174,50 @@ export function MediaPicker({ name, defaultUrl, defaultType }: Props) {
             accept="image/*,video/*"
             onChange={(e) => {
               const file = e.target.files?.[0];
-              if (file) void upload(file);
+              if (file) upload(file);
             }}
             className="hidden"
           />
-          <button
-            type="button"
-            onClick={() => fileInput.current?.click()}
-            disabled={uploading}
-            className="btn-secondary w-full text-base disabled:opacity-60"
+
+          {/* The whole area is a drop target; the button inside keeps it usable
+              on a phone, where there's nothing to drag from. */}
+          <div
+            className={`rounded-xl2 border-2 border-dashed p-5 text-center transition ${
+              dragging ? 'border-brand bg-brand-tint' : 'border-line'
+            }`}
           >
-            {uploading ? 'Uploading…' : url ? 'Replace file' : 'Choose a photo or video'}
-          </button>
-          <p className="mt-2 text-sm text-muted">
-            Film it on your phone and upload straight from here. Up to 100 MB.
-          </p>
+            {uploading ? (
+              <>
+                <p className="text-base font-semibold">Uploading… {progress}%</p>
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-line">
+                  <div
+                    className="h-full rounded-full bg-brand transition-[width]"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+                <p className="mt-2 text-sm text-muted">
+                  Large videos take a minute. Keep this page open.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-base font-semibold">
+                  {dragging ? 'Drop it here' : 'Drag a photo or video here'}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => fileInput.current?.click()}
+                  className="btn-secondary mt-3 w-full text-base"
+                >
+                  {url ? 'Replace file' : 'Or choose a file'}
+                </button>
+                <p className="mt-2 text-sm text-muted">
+                  Film it on your phone and upload straight from here. Up to 100 MB.
+                </p>
+              </>
+            )}
+          </div>
+
           {error && <p className="mt-2 text-sm font-semibold text-brand">{error}</p>}
         </div>
       )}

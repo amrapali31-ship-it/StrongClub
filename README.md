@@ -107,7 +107,9 @@ don't put anything sensitive in the exercise notes.
    - reps, or a hold in seconds
    - sets and rest between them
    - instructions in your own words
-   - a demo: paste a YouTube link, or upload a photo/video (up to 100 MB)
+   - a demo: paste a YouTube link, or drag a photo/video onto the media block
+     (or tap to choose one). Up to 100 MB, with a progress bar — a phone video
+     over mobile data is not a fast upload.
 4. Tick **Visible to your parents** on the week when it's ready.
 
 **Repeat last week** on the admin home is the usual weekly path: it clones the

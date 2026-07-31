@@ -4,13 +4,13 @@ import { randomUUID } from 'node:crypto';
 
 import { usingSupabase } from '@/lib/db';
 import { supabaseAdmin } from '@/lib/db/supabase';
+// Limits are shared with the browser so a dropped file can be rejected before
+// it's uploaded rather than after.
+import { ALLOWED_UPLOAD_TYPES, MAX_UPLOAD_BYTES } from '@/lib/media';
 
 export const MEDIA_BUCKET = 'workout-media';
 
-/** 100 MB — comfortably above a two-minute phone clip, below Supabase limits. */
-export const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
-
-const ALLOWED = /^(image\/(png|jpeg|gif|webp|avif)|video\/(mp4|quicktime|webm))$/;
+export { MAX_UPLOAD_BYTES };
 
 function safeExtension(file: File): string {
   const ext = path.extname(file.name).toLowerCase();
@@ -27,7 +27,7 @@ export async function saveUpload(file: File): Promise<string> {
   if (file.size > MAX_UPLOAD_BYTES) {
     throw new Error(`That file is too big. Keep uploads under ${MAX_UPLOAD_BYTES / 1024 / 1024} MB.`);
   }
-  if (!ALLOWED.test(file.type)) {
+  if (!ALLOWED_UPLOAD_TYPES.test(file.type)) {
     throw new Error('Only images (png, jpg, gif, webp) and videos (mp4, mov, webm) can be uploaded.');
   }
 
