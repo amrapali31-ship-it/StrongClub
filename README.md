@@ -111,6 +111,29 @@ don't put anything sensitive in the exercise notes.
 **Duplicate this week** on a week page copies everything — workouts, exercises,
 media — as a fresh draft, which is the fast way to build next week from this one.
 
+## Importing a week with AI
+
+`/admin/import` takes a pasted plan, photos, or both, and drafts a whole week —
+workouts, exercises, reps, sets, rest, instructions. You review it, then it saves
+as an unpublished draft you can edit like any other week.
+
+Set `ANTHROPIC_API_KEY` (from [console.anthropic.com](https://console.anthropic.com),
+separate from any Claude subscription) to switch it on. Without it the page says
+so and the rest of the app is unaffected.
+
+Images work for the sources you can't copy and paste: a physio's printed handout,
+a screenshot of another app, a photo of a routine someone wrote down. Up to 6
+images, 5 MB each.
+
+**Videos are deliberately never imported.** Models generate YouTube IDs that look
+plausible and resolve to nothing or to the wrong clip, so media stays a manual
+step. Everything else — names, numbers, instructions — is transcribed from what
+you supplied, and the prompt tells the model to leave gaps empty rather than
+invent technique cues for exercises it can't read.
+
+Roughly a fraction of a penny per import. The review step is not decorative:
+this is exercise guidance for your parents, so read the numbers before publishing.
+
 Whichever published week has the most recent start date is the one shown as
 "this week"; the rest stay reachable under **Earlier weeks**.
 

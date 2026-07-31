@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 
 import { checkPasscode, isAdmin, signInAdmin, signOutAdmin } from '@/lib/auth';
 import { db } from '@/lib/db';
+import type { DraftWeek } from '@/lib/importer';
 import { detectMediaType } from '@/lib/media';
 import type { ExerciseMode, MediaType } from '@/lib/types';
 
@@ -122,6 +123,59 @@ export async function duplicateWeek(formData: FormData): Promise<void> {
   }
 
   redirect(`/admin/week/${copy.id}`);
+}
+
+/**
+ * Turns a reviewed AI draft into a real week. Always saved unpublished — the
+ * coach still has to tick "Visible to your parents" before anyone sees it.
+ */
+export async function saveImportedWeek(formData: FormData): Promise<void> {
+  await requireAdmin();
+
+  let draft: DraftWeek;
+  try {
+    draft = JSON.parse(str(formData, 'draft')) as DraftWeek;
+  } catch {
+    redirect('/admin/import');
+  }
+
+  const week = await db.createWeek({
+    title: str(formData, 'title') || draft.title || 'Imported week',
+    start_date: str(formData, 'start_date') || null,
+    note: draft.note ?? '',
+    published: false,
+  });
+
+  for (const [workoutIndex, draftWorkout] of draft.workouts.entries()) {
+    const workout = await db.createWorkout({
+      week_id: week.id,
+      title: draftWorkout.title || `Workout ${workoutIndex + 1}`,
+      subtitle: draftWorkout.subtitle ?? '',
+      position: workoutIndex,
+    });
+
+    for (const [exerciseIndex, draftExercise] of draftWorkout.exercises.entries()) {
+      const mode: ExerciseMode = draftExercise.mode === 'time' ? 'time' : 'reps';
+      await db.createExercise({
+        workout_id: workout.id,
+        name: draftExercise.name || 'Untitled exercise',
+        instructions: draftExercise.instructions ?? '',
+        mode,
+        sets: Math.max(1, Math.round(draftExercise.sets || 1)),
+        reps: mode === 'reps' ? Math.max(1, Math.round(draftExercise.reps ?? 10)) : null,
+        duration_seconds:
+          mode === 'time' ? Math.max(1, Math.round(draftExercise.duration_seconds ?? 30)) : null,
+        rest_seconds: Math.max(0, Math.round(draftExercise.rest_seconds ?? 30)),
+        // Media is never imported — models invent plausible-looking video links.
+        media_type: 'none',
+        media_url: '',
+        position: exerciseIndex,
+      });
+    }
+  }
+
+  revalidatePath('/admin');
+  redirect(`/admin/week/${week.id}`);
 }
 
 /* --------------------------------------------------------------- workouts */

@@ -19,8 +19,14 @@ export default async function AdminHome() {
   return (
     <>
       <section>
-        <div className="flex items-end justify-between gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-extrabold tracking-tight">Weeks</h1>
+          <Link
+            href="/admin/import"
+            className="rounded-xl border-2 border-brand px-4 py-2 text-sm font-bold text-brand transition hover:bg-brand-tint"
+          >
+            Import with AI
+          </Link>
         </div>
 
         <ul className="mt-4 flex flex-col gap-2">
