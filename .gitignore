@@ -45,3 +45,6 @@ next-env.d.ts
 public/uploads/
 .env
 .env.local
+
+# The example file carries no secrets and documents the required vars.
+!.env.example
