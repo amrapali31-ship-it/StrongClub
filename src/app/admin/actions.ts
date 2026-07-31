@@ -335,6 +335,7 @@ export async function addExerciseFromLibrary(formData: FormData): Promise<void> 
   await db.createExercise({
     workout_id: workoutId,
     name: source.name,
+    category: source.category,
     instructions: source.instructions,
     mode: source.mode,
     sets: source.sets,
@@ -361,7 +362,7 @@ export async function saveExerciseToLibrary(formData: FormData): Promise<void> {
 
   const payload = {
     name: exercise.name,
-    category: str(formData, 'category') || EXERCISE_CATEGORIES[0],
+    category: str(formData, 'category') || exercise.category || EXERCISE_CATEGORIES[0],
     instructions: exercise.instructions,
     mode: exercise.mode,
     sets: exercise.sets,
@@ -411,6 +412,7 @@ export async function saveExercise(formData: FormData): Promise<void> {
 
   const exercise = await db.updateExercise(id, {
     name: str(formData, 'name') || 'Untitled exercise',
+    category: str(formData, 'category'),
     instructions: str(formData, 'instructions'),
     mode,
     sets: Math.max(1, Math.round(num(formData, 'sets', 1))),
@@ -448,7 +450,11 @@ export async function moveExercise(formData: FormData): Promise<void> {
   const exercise = await db.getExercise(id);
   if (!exercise) return;
 
-  const siblings = await db.listExercises(exercise.workout_id);
+  // Move within the exercise's own sub-section — swapping across a group
+  // boundary would silently recategorise it.
+  const siblings = (await db.listExercises(exercise.workout_id)).filter(
+    (e) => (e.category ?? '') === (exercise.category ?? ''),
+  );
   const index = siblings.findIndex((e) => e.id === id);
   const swapWith = siblings[index + direction];
   if (!swapWith) return;

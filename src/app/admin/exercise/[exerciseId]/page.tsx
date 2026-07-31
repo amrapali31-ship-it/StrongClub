@@ -31,10 +31,37 @@ export default async function AdminExercise({
       <form action={saveExercise} className="card mt-3 p-5">
         <input type="hidden" name="exerciseId" value={exercise.id} />
 
-        <label htmlFor="name" className="label">
-          Exercise name
-        </label>
-        <input id="name" name="name" defaultValue={exercise.name} className="field" />
+        <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
+          <div>
+            <label htmlFor="name" className="label">
+              Exercise name
+            </label>
+            <input id="name" name="name" defaultValue={exercise.name} className="field" />
+          </div>
+          <div>
+            <label htmlFor="category" className="label">
+              Section
+            </label>
+            <select
+              id="category"
+              name="category"
+              defaultValue={exercise.category ?? ''}
+              className="field"
+            >
+              <option value="">No section</option>
+              {EXERCISE_CATEGORIES.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <p className="mt-2 text-sm text-muted">
+          Exercises sharing a section are grouped together under a heading when your parents open
+          the workout.
+        </p>
 
         <div className="mt-5">
           <ModeFields exercise={exercise} />
@@ -74,7 +101,11 @@ export default async function AdminExercise({
             edits to update the stored version.
           </p>
         </div>
-        <select name="category" defaultValue={EXERCISE_CATEGORIES[0]} className="field sm:w-40">
+        <select
+          name="category"
+          defaultValue={exercise.category || EXERCISE_CATEGORIES[0]}
+          className="field sm:w-40"
+        >
           {EXERCISE_CATEGORIES.map((category) => (
             <option key={category} value={category}>
               {category}

@@ -32,6 +32,11 @@ export interface Exercise {
   id: string;
   workout_id: string;
   name: string;
+  /**
+   * Copied from the library entry this came from. Drives the sub-sections on
+   * the workout page. Empty for one-offs typed straight in.
+   */
+  category: string;
   instructions: string;
   mode: ExerciseMode;
   sets: number;

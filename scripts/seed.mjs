@@ -49,6 +49,7 @@ const plan = [
     exercises: [
       {
         name: 'Sit to stand',
+        category: 'Legs',
         mode: 'reps',
         sets: 2,
         reps: 8,
@@ -60,6 +61,7 @@ const plan = [
       },
       {
         name: 'Heel raises',
+        category: 'Legs',
         mode: 'reps',
         sets: 2,
         reps: 12,
@@ -69,6 +71,7 @@ const plan = [
       },
       {
         name: 'Standing march',
+        category: 'Balance',
         mode: 'time',
         duration_seconds: 30,
         sets: 2,
@@ -78,6 +81,7 @@ const plan = [
       },
       {
         name: 'One-leg balance',
+        category: 'Balance',
         mode: 'time',
         duration_seconds: 20,
         sets: 2,
@@ -93,6 +97,7 @@ const plan = [
     exercises: [
       {
         name: 'Wall push-ups',
+        category: 'Upper body',
         mode: 'reps',
         sets: 2,
         reps: 8,
@@ -102,6 +107,7 @@ const plan = [
       },
       {
         name: 'Shoulder rolls',
+        category: 'Mobility',
         mode: 'reps',
         sets: 1,
         reps: 10,
@@ -110,6 +116,7 @@ const plan = [
       },
       {
         name: 'Bicep curls',
+        category: 'Upper body',
         mode: 'reps',
         sets: 2,
         reps: 10,
@@ -119,6 +126,7 @@ const plan = [
       },
       {
         name: 'Overhead reach',
+        category: 'Upper body',
         mode: 'reps',
         sets: 2,
         reps: 8,
@@ -134,6 +142,7 @@ const plan = [
     exercises: [
       {
         name: 'Neck turns',
+        category: 'Mobility',
         mode: 'reps',
         sets: 1,
         reps: 6,
@@ -142,6 +151,7 @@ const plan = [
       },
       {
         name: 'Seated twist',
+        category: 'Core',
         mode: 'time',
         duration_seconds: 30,
         sets: 2,
@@ -151,6 +161,7 @@ const plan = [
       },
       {
         name: 'Ankle circles',
+        category: 'Mobility',
         mode: 'reps',
         sets: 2,
         reps: 10,
@@ -159,6 +170,7 @@ const plan = [
       },
       {
         name: 'Seated cat-cow',
+        category: 'Mobility',
         mode: 'reps',
         sets: 2,
         reps: 8,
@@ -174,6 +186,7 @@ const plan = [
     exercises: [
       {
         name: 'Warm-up walk',
+        category: 'Cardio',
         mode: 'time',
         duration_seconds: 300,
         sets: 1,
@@ -182,6 +195,7 @@ const plan = [
       },
       {
         name: 'Brisk walk',
+        category: 'Cardio',
         mode: 'time',
         duration_seconds: 600,
         sets: 1,
@@ -191,6 +205,7 @@ const plan = [
       },
       {
         name: 'Cool-down walk',
+        category: 'Cardio',
         mode: 'time',
         duration_seconds: 300,
         sets: 1,
@@ -199,6 +214,7 @@ const plan = [
       },
       {
         name: 'Deep breathing',
+        category: 'Cardio',
         mode: 'time',
         duration_seconds: 60,
         sets: 2,
@@ -229,6 +245,7 @@ plan.forEach((entry, workoutIndex) => {
       id: randomUUID(),
       workout_id: workout.id,
       name: exercise.name,
+      category: exercise.category ?? '',
       instructions: exercise.instructions ?? '',
       mode: exercise.mode,
       sets: exercise.sets,

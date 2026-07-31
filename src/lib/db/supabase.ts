@@ -180,6 +180,7 @@ export const supabaseDb: Database = {
         .insert({
           workout_id: data.workout_id,
           name: data.name,
+          category: data.category ?? '',
           instructions: data.instructions ?? '',
           mode: data.mode ?? 'reps',
           sets: data.sets ?? 1,

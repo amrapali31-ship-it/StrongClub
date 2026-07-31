@@ -8,7 +8,7 @@ import { InlineTimer } from '@/components/InlineTimer';
 import { getActiveProfileId } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { setsLabel } from '@/lib/media';
-import { getWorkoutProgress } from '@/lib/queries';
+import { getWorkoutProgress, groupExercises, shouldShowGroupHeadings } from '@/lib/queries';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,6 +29,9 @@ export default async function WorkoutOverview({
   const { workout, exercises, doneExerciseIds, estimatedMinutes } = progress;
   const week = await db.getWeek(workout.week_id);
   const doneCount = exercises.filter((e) => doneExerciseIds.has(e.id)).length;
+
+  const groups = groupExercises(exercises);
+  const showHeadings = shouldShowGroupHeadings(groups);
 
   return (
     <>
@@ -61,12 +64,25 @@ export default async function WorkoutOverview({
           so you can see where you got to.
         </p>
 
-        <ol className="mt-6 flex flex-col gap-4">
-          {exercises.map((exercise, i) => {
-            const done = doneExerciseIds.has(exercise.id);
+        {groups.map((group) => (
+          <section key={group.category || 'other'} className="mt-8 first:mt-6">
+            {showHeadings && (
+              <h2 className="mb-3 flex items-baseline gap-2 text-sm font-bold tracking-widest text-brand uppercase">
+                {group.heading}
+                <span className="text-xs font-semibold tracking-normal text-muted normal-case">
+                  {group.exercises.length}{' '}
+                  {group.exercises.length === 1 ? 'exercise' : 'exercises'}
+                </span>
+              </h2>
+            )}
 
-            return (
-              <li key={exercise.id} className={`card p-4 ${done ? 'bg-success-tint/40' : ''}`}>
+            <ol className="flex flex-col gap-4">
+              {group.exercises.map((exercise) => {
+                const done = doneExerciseIds.has(exercise.id);
+                const i = exercises.indexOf(exercise);
+
+                return (
+                  <li key={exercise.id} className={`card p-4 ${done ? 'bg-success-tint/40' : ''}`}>
                 <div className="flex items-start gap-3">
                   <span className="mt-1 w-6 shrink-0 text-center text-base font-bold text-muted/70 tabular-nums">
                     {i + 1}
@@ -123,11 +139,13 @@ export default async function WorkoutOverview({
                       Rest about {exercise.rest_seconds} seconds between sets.
                     </p>
                   )}
-                </div>
-              </li>
-            );
-          })}
-        </ol>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          </section>
+        ))}
 
         {doneCount > 0 && (
           <form action={resetWorkoutForm} className="mt-8">

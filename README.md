@@ -141,6 +141,30 @@ workout exercise pushes it back for reuse (saving under a name that already
 exists updates that entry rather than making a near-duplicate), and you can add
 entries by hand at the top of the library page.
 
+## Sub-sections inside a workout
+
+Exercises carry the category they inherited from the library, and the workout
+page groups by it — Legs, then Core, then Balance. No extra step: pick from the
+library and the sections appear.
+
+Group order follows the order you arranged the exercises, so whichever section
+you put first stays first. Reorder arrows move an exercise **within** its own
+section — crossing a boundary would silently recategorise it.
+
+Headings only show when a workout has more than one section; a "Legs" header
+above four leg exercises is noise. One-offs you typed in with no section collect
+at the end under "Also", and you can set a section on any exercise from its own
+edit page.
+
+Exercises created before this existed need one backfill:
+
+```bash
+npm run backfill:categories
+```
+
+It matches names against the library and only fills blanks — anything you've set
+by hand is left alone.
+
 ## Importing a week with AI
 
 `/admin/import` takes a pasted plan, photos, or both, and drafts a whole week —

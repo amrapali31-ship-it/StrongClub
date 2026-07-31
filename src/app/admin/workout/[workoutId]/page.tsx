@@ -13,6 +13,7 @@ import { DeleteExerciseButton } from '@/components/admin/DeleteExerciseButton';
 import { MediaThumb } from '@/components/MediaFrame';
 import { db } from '@/lib/db';
 import { setsLabel } from '@/lib/media';
+import { groupExercises, shouldShowGroupHeadings } from '@/lib/queries';
 import { EXERCISE_CATEGORIES } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -31,6 +32,9 @@ export default async function AdminWorkout({
     db.listExercises(workout.id),
     db.listLibrary(),
   ]);
+
+  const groups = groupExercises(exercises);
+  const showHeadings = shouldShowGroupHeadings(groups);
 
   return (
     <>
@@ -68,46 +72,55 @@ export default async function AdminWorkout({
       <section className="mt-8">
         <h2 className="text-xl font-extrabold tracking-tight">Exercises</h2>
 
-        <ul className="mt-4 flex flex-col gap-2">
-          {exercises.map((exercise, i) => (
-            <li key={exercise.id} className="card relative flex items-center gap-2 p-3">
-              <div className="flex flex-col">
-                <MoveButton exerciseId={exercise.id} direction="up" disabled={i === 0} />
-                <MoveButton
-                  exerciseId={exercise.id}
-                  direction="down"
-                  disabled={i === exercises.length - 1}
-                />
-              </div>
+        {groups.map((group) => (
+          <div key={group.category || 'other'} className="mt-4">
+            {showHeadings && (
+              <h3 className="mb-2 text-sm font-bold tracking-widest text-brand uppercase">
+                {group.heading}
+              </h3>
+            )}
 
-              <MediaThumb
-                mediaType={exercise.media_type}
-                url={exercise.media_url}
-                name={exercise.name}
-              />
+            <ul className="flex flex-col gap-2">
+              {group.exercises.map((exercise, i) => (
+                <li key={exercise.id} className="card relative flex items-center gap-2 p-3">
+                  <div className="flex flex-col">
+                    <MoveButton exerciseId={exercise.id} direction="up" disabled={i === 0} />
+                    <MoveButton
+                      exerciseId={exercise.id}
+                      direction="down"
+                      disabled={i === group.exercises.length - 1}
+                    />
+                  </div>
 
-              {/* The whole row is the edit link — a separate "Edit" label was
-                  just stealing width from the name on a phone. */}
-              <Link href={`/admin/exercise/${exercise.id}`} className="min-w-0 flex-1 py-1">
-                <p className="font-bold">{exercise.name}</p>
-                <p className="text-sm text-muted">
-                  {setsLabel(exercise)}
-                  {exercise.media_type === 'none' && (
-                    <span className="ml-2 whitespace-nowrap text-brand">no video</span>
-                  )}
-                </p>
-              </Link>
+                  <MediaThumb
+                    mediaType={exercise.media_type}
+                    url={exercise.media_url}
+                    name={exercise.name}
+                  />
 
-              <form action={removeExercise} className="shrink-0">
-                <input type="hidden" name="exerciseId" value={exercise.id} />
-                <DeleteExerciseButton name={exercise.name} />
-              </form>
-            </li>
-          ))}
-          {exercises.length === 0 && (
-            <li className="card p-4 text-muted">No exercises yet.</li>
-          )}
-        </ul>
+                  {/* The whole row is the edit link — a separate "Edit" label
+                      was just stealing width from the name on a phone. */}
+                  <Link href={`/admin/exercise/${exercise.id}`} className="min-w-0 flex-1 py-1">
+                    <p className="font-bold">{exercise.name}</p>
+                    <p className="text-sm text-muted">
+                      {setsLabel(exercise)}
+                      {exercise.media_type === 'none' && (
+                        <span className="ml-2 whitespace-nowrap text-brand">no video</span>
+                      )}
+                    </p>
+                  </Link>
+
+                  <form action={removeExercise} className="shrink-0">
+                    <input type="hidden" name="exerciseId" value={exercise.id} />
+                    <DeleteExerciseButton name={exercise.name} />
+                  </form>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+
+        {exercises.length === 0 && <p className="card mt-4 p-4 text-muted">No exercises yet.</p>}
 
         {library.length > 0 && (
           <form action={addExerciseFromLibrary} className="card mt-4 flex items-end gap-3 p-4">

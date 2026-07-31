@@ -18,6 +18,44 @@ export async function getCurrentWeek(): Promise<Week | null> {
   return weeks[0] ?? null;
 }
 
+export interface ExerciseGroup {
+  /** Empty string for exercises with no category. */
+  category: string;
+  /** What to print above the group. */
+  heading: string;
+  exercises: Exercise[];
+}
+
+/**
+ * Splits a workout into its sub-sections — Legs, Core, and so on — using the
+ * category each exercise inherited from the library.
+ *
+ * Groups appear in the order they first show up in the workout, so the coach's
+ * own sequencing decides whether legs or core comes first. Uncategorised
+ * one-offs collect at the end.
+ */
+export function groupExercises(exercises: Exercise[]): ExerciseGroup[] {
+  const groups: ExerciseGroup[] = [];
+
+  for (const exercise of exercises) {
+    const category = exercise.category ?? '';
+    const existing = groups.find((g) => g.category === category);
+    if (existing) existing.exercises.push(exercise);
+    else groups.push({ category, heading: category || 'Also', exercises: [exercise] });
+  }
+
+  // Uncategorised last, however they were ordered.
+  return [...groups.filter((g) => g.category), ...groups.filter((g) => !g.category)];
+}
+
+/**
+ * Headings only earn their space when there's more than one section — a "Legs"
+ * header above a workout that is entirely legs is just noise.
+ */
+export function shouldShowGroupHeadings(groups: ExerciseGroup[]): boolean {
+  return groups.length > 1;
+}
+
 /** Monday of the week containing `date`, as yyyy-mm-dd. */
 function mondayOf(date: Date): string {
   const copy = new Date(date);
