@@ -3,7 +3,8 @@ import { notFound, redirect } from 'next/navigation';
 
 import { resetWorkoutForm, toggleExerciseForm } from '@/app/actions';
 import { AppHeader } from '@/components/AppHeader';
-import { MediaThumb } from '@/components/MediaFrame';
+import { ExerciseMedia } from '@/components/ExerciseMedia';
+import { InlineTimer } from '@/components/InlineTimer';
 import { getActiveProfileId } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { setsLabel } from '@/lib/media';
@@ -25,7 +26,7 @@ export default async function WorkoutOverview({
   const progress = await getWorkoutProgress(workoutId, profile.id);
   if (!progress) notFound();
 
-  const { workout, exercises, doneExerciseIds, status, estimatedMinutes } = progress;
+  const { workout, exercises, doneExerciseIds, estimatedMinutes } = progress;
   const week = await db.getWeek(workout.week_id);
   const doneCount = exercises.filter((e) => doneExerciseIds.has(e.id)).length;
 
@@ -33,7 +34,7 @@ export default async function WorkoutOverview({
     <>
       <AppHeader profile={profile} />
 
-      <main className="mx-auto w-full max-w-2xl flex-1 px-5 py-6 pb-32">
+      <main className="mx-auto w-full max-w-2xl flex-1 px-5 py-6">
         <Link
           href={week ? `/week/${week.id}` : '/home'}
           className="text-base font-semibold text-muted hover:text-ink"
@@ -55,72 +56,92 @@ export default async function WorkoutOverview({
           )}
         </p>
 
-        <ul className="mt-6 flex flex-col gap-2">
+        <p className="mt-4 text-base text-muted">
+          Work down the list at your own pace. Tick things off if you like &mdash; it&rsquo;s just
+          so you can see where you got to.
+        </p>
+
+        <ol className="mt-6 flex flex-col gap-4">
           {exercises.map((exercise, i) => {
             const done = doneExerciseIds.has(exercise.id);
+
             return (
-              <li key={exercise.id} className="card flex items-center gap-4 p-3">
-                <span className="w-5 shrink-0 text-center text-sm font-bold text-muted/60 tabular-nums">
-                  {i + 1}
-                </span>
+              <li key={exercise.id} className={`card p-4 ${done ? 'bg-success-tint/40' : ''}`}>
+                <div className="flex items-start gap-3">
+                  <span className="mt-1 w-6 shrink-0 text-center text-base font-bold text-muted/70 tabular-nums">
+                    {i + 1}
+                  </span>
 
-                <MediaThumb
-                  mediaType={exercise.media_type}
-                  url={exercise.media_url}
-                  name={exercise.name}
-                />
+                  <div className="min-w-0 flex-1">
+                    <h2 className="text-2xl font-bold">{exercise.name}</h2>
+                    <p className="mt-0.5 text-lg font-semibold text-brand">
+                      {setsLabel(exercise)}
+                    </p>
+                  </div>
 
-                <div className="min-w-0 flex-1">
-                  <p className={`text-lg font-bold ${done ? 'text-muted line-through' : ''}`}>
-                    {exercise.name}
-                  </p>
-                  <p className="text-base text-muted">{setsLabel(exercise)}</p>
+                  <form action={toggleExerciseForm} className="shrink-0">
+                    <input type="hidden" name="exerciseId" value={exercise.id} />
+                    <input type="hidden" name="workoutId" value={workout.id} />
+                    <input type="hidden" name="done" value={done ? 'false' : 'true'} />
+                    <button
+                      type="submit"
+                      aria-label={
+                        done ? `Mark ${exercise.name} not done` : `Mark ${exercise.name} done`
+                      }
+                      className={`flex h-12 w-12 items-center justify-center rounded-full border-2 text-xl font-bold transition active:scale-95 ${
+                        done
+                          ? 'border-success bg-success text-white'
+                          : 'border-line text-transparent hover:border-ink/30'
+                      }`}
+                    >
+                      ✓
+                    </button>
+                  </form>
                 </div>
 
-                <form action={toggleExerciseForm}>
-                  <input type="hidden" name="exerciseId" value={exercise.id} />
-                  <input type="hidden" name="workoutId" value={workout.id} />
-                  <input type="hidden" name="done" value={done ? 'false' : 'true'} />
-                  <button
-                    type="submit"
-                    aria-label={done ? `Mark ${exercise.name} not done` : `Mark ${exercise.name} done`}
-                    className={`flex h-11 w-11 items-center justify-center rounded-full border-2 text-lg font-bold transition active:scale-95 ${
-                      done
-                        ? 'border-success bg-success text-white'
-                        : 'border-line text-transparent hover:border-ink/30'
-                    }`}
-                  >
-                    ✓
-                  </button>
-                </form>
+                <div className="mt-4 sm:pl-9">
+                  <ExerciseMedia
+                    mediaType={exercise.media_type}
+                    url={exercise.media_url}
+                    name={exercise.name}
+                  />
+
+                  {exercise.instructions && (
+                    <p className="mt-3 text-lg leading-relaxed whitespace-pre-line">
+                      {exercise.instructions}
+                    </p>
+                  )}
+
+                  {exercise.mode === 'time' && (
+                    <InlineTimer seconds={exercise.duration_seconds ?? 30} />
+                  )}
+
+                  {/* The sets/reps target is already under the title — this line
+                      only adds the rest guidance, so it isn't repeated. */}
+                  {exercise.sets > 1 && exercise.rest_seconds > 0 && (
+                    <p className="mt-3 text-base text-muted">
+                      Rest about {exercise.rest_seconds} seconds between sets.
+                    </p>
+                  )}
+                </div>
               </li>
             );
           })}
-        </ul>
+        </ol>
 
         {doneCount > 0 && (
-          <form action={resetWorkoutForm} className="mt-6">
+          <form action={resetWorkoutForm} className="mt-8">
             <input type="hidden" name="workoutId" value={workout.id} />
             <button type="submit" className="btn-ghost w-full text-base">
-              Clear my progress on this workout
+              Clear my ticks on this workout
             </button>
           </form>
         )}
-      </main>
 
-      {exercises.length > 0 && (
-        <footer className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-cream/95 px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur">
-          <div className="mx-auto w-full max-w-2xl">
-            <Link href={`/workout/${workout.id}/do`} className="btn-primary w-full">
-              {status === 'not-started'
-                ? 'Start workout'
-                : status === 'done'
-                  ? 'Do it again'
-                  : 'Continue'}
-            </Link>
-          </div>
-        </footer>
-      )}
+        <Link href={week ? `/week/${week.id}` : '/home'} className="btn-secondary mt-4 w-full">
+          Back to this week
+        </Link>
+      </main>
     </>
   );
 }

@@ -1,10 +1,11 @@
 # StrongClub
 
 A small workout app for your parents. You write the workouts; they open a link on
-their phone, tap through one exercise at a time, and tick things off as they go.
+their phone, read the week, and follow along at their own pace.
 
-- **Them:** pick their name → this week's workouts → tap one → big text, one
-  exercise per screen, video or photo, timers for holds, checkmarks as they go.
+- **Them:** pick their name → this week's workouts → tap one → the whole workout
+  on one page: big text, video or photo per exercise, an optional timer on holds,
+  and a tick beside anything they've done. Nothing to start, nothing to drive.
 - **You:** `/admin` behind a passcode → build weeks, add exercises with reps or
   time, attach a YouTube link or upload a clip you filmed → see what got done.
 
@@ -99,7 +100,8 @@ don't put anything sensitive in the exercise notes.
 
 ## Adding a week
 
-1. `/admin` → **Add week** → name it, set the start date.
+1. `/admin` → **Repeat last week** (copies everything across) or **Start Week N
+   empty**. Either way it names and dates itself; rename it if you care.
 2. Add workouts to it — four a week is the shape the copy assumes, but any number works.
 3. Open each workout, add exercises. Per exercise you set:
    - reps, or a hold in seconds
@@ -108,8 +110,9 @@ don't put anything sensitive in the exercise notes.
    - a demo: paste a YouTube link, or upload a photo/video (up to 100 MB)
 4. Tick **Visible to your parents** on the week when it's ready.
 
-**Duplicate this week** on a week page copies everything — workouts, exercises,
-media — as a fresh draft, which is the fast way to build next week from this one.
+**Repeat last week** on the admin home is the usual weekly path: it clones the
+previous week's workouts, exercises and videos into the next dated slot as a
+draft, ready to tweak.
 
 ## Exercise library
 
@@ -172,11 +175,12 @@ src/
     page.tsx              who's working out
     home/                 this week's workouts
     week/[weekId]/        any past week
-    workout/[workoutId]/  overview, and /do for the player
+    workout/[workoutId]/  the workout itself — read top to bottom
     admin/                passcode-gated editor
     api/upload/           photo & video uploads
   components/
-    WorkoutPlayer.tsx     one-exercise-at-a-time player, timers, rest screens
+    ExerciseMedia.tsx     inline video/photo; YouTube loads only when tapped
+    InlineTimer.tsx       optional countdown on timed holds
     WeekBoard.tsx         the four workout cards
     MediaFrame.tsx        YouTube / video / image rendering
   lib/
