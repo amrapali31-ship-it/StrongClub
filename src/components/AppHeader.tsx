@@ -5,7 +5,7 @@ import type { Profile } from '@/lib/types';
 
 export function AppHeader({ profile }: { profile: Profile }) {
   return (
-    <header className="sticky top-0 z-20 border-b border-line bg-cream/90 backdrop-blur">
+    <header className="sticky top-0 z-20 border-b border-line bg-canvas/90 backdrop-blur">
       <div className="mx-auto flex w-full max-w-2xl items-center gap-3 px-5 py-3">
         <Link href="/home" className="text-lg font-extrabold tracking-tight">
           StrongClub

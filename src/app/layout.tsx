@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#f7f3ec',
+  themeColor: '#0f0e14',
   width: 'device-width',
   initialScale: 1,
   // Pinch-zoom stays available; we just don't want a double-tap zoom while

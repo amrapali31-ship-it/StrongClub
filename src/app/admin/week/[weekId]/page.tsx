@@ -60,7 +60,7 @@ export default async function AdminWeek({ params }: { params: Promise<{ weekId: 
                 type="checkbox"
                 name="published"
                 defaultChecked={week.published}
-                className="h-5 w-5 accent-[#d6552b]"
+                className="h-5 w-5 accent-brand"
               />
               <span className="font-semibold">Visible to your parents</span>
             </label>

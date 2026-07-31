@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Your workouts for the week.',
     start_url: '/',
     display: 'standalone',
-    background_color: '#f7f3ec',
-    theme_color: '#f7f3ec',
+    background_color: '#0f0e14',
+    theme_color: '#0f0e14',
     icons: [
       { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml' },
       { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },

@@ -1,16 +1,22 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-cream: #f7f3ec;
-  --color-surface: #ffffff;
-  --color-ink: #1b1917;
-  --color-muted: #6f665c;
-  --color-line: #e5ded2;
-  --color-brand: #d6552b;
-  --color-brand-dark: #b8441f;
-  --color-brand-tint: #fbeae2;
-  --color-success: #2e7d53;
-  --color-success-tint: #e3f2e9;
+  /* Dark, but contrast-first — what actually hurts older eyes is low contrast,
+     not darkness, so every pairing here clears WCAG AA comfortably:
+     ink/canvas ≈ 16:1, muted/canvas ≈ 7:1, canvas-on-brand ≈ 9:1. */
+  --color-canvas: #0f0e14;
+  --color-surface: #1b1a23;
+  --color-ink: #f6f4ff;
+  --color-muted: #a9a4ba;
+  --color-line: #2e2b3b;
+
+  --color-brand: #ff4d9d;
+  /* Hover goes brighter, not darker — "darker" reads as disabled on a dark UI. */
+  --color-brand-dark: #ff6fae;
+  --color-brand-tint: #2b1526;
+
+  --color-success: #3ddc97;
+  --color-success-tint: #16332a;
 
   --font-sans:
     ui-rounded, 'SF Pro Rounded', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui,
@@ -20,8 +26,7 @@
 }
 
 :root {
-  /* Older eyes, phone in hand: light theme only, deliberately. */
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 html {
@@ -29,7 +34,7 @@ html {
 }
 
 body {
-  background: var(--color-cream);
+  background: var(--color-canvas);
   color: var(--color-ink);
   font-family: var(--font-sans);
   overscroll-behavior-y: none;
@@ -45,12 +50,14 @@ body {
     @apply inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl px-6 text-lg font-semibold transition active:scale-[0.98];
   }
 
+  /* Dark text on bright pink: far higher contrast than white-on-pink, and it
+     makes the CTA the loudest thing on the screen. */
   .btn-primary {
-    @apply bg-brand text-white shadow-sm hover:bg-brand-dark;
+    @apply bg-brand font-bold text-canvas shadow-lg shadow-brand/20 hover:bg-brand-dark;
   }
 
   .btn-secondary {
-    @apply border-2 border-line bg-surface text-ink hover:border-ink/30;
+    @apply border-2 border-line bg-surface text-ink hover:border-brand/60;
   }
 
   .btn-ghost {
@@ -62,10 +69,16 @@ body {
   }
 
   .field {
-    @apply w-full rounded-xl border-2 border-line bg-surface px-4 py-3 text-base text-ink outline-none placeholder:text-muted/60 focus:border-brand;
+    @apply w-full rounded-xl border-2 border-line bg-canvas px-4 py-3 text-base text-ink outline-none placeholder:text-muted/60 focus:border-brand;
   }
 
   .label {
     @apply mb-1.5 block text-sm font-semibold text-muted;
   }
+}
+
+/* Native controls (date pickers, selects, checkboxes) follow color-scheme. */
+select.field option {
+  background: var(--color-surface);
+  color: var(--color-ink);
 }

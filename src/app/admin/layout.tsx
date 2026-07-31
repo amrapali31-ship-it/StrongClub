@@ -11,7 +11,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <>
-      <header className="sticky top-0 z-20 border-b border-line bg-cream/90 backdrop-blur">
+      <header className="sticky top-0 z-20 border-b border-line bg-canvas/90 backdrop-blur">
         <div className="mx-auto flex w-full max-w-3xl items-center gap-4 px-5 py-3">
           <Link href="/admin" className="shrink-0 text-lg font-extrabold tracking-tight">
             StrongClub <span className="hidden text-muted sm:inline">coach</span>

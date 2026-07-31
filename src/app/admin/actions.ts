@@ -39,7 +39,7 @@ export async function logout(): Promise<void> {
 
 /* --------------------------------------------------------------- profiles */
 
-const PROFILE_COLORS = ['#d6552b', '#2e7d53', '#3b6ea5', '#7a4fa3', '#b8860b'];
+const PROFILE_COLORS = ['#ff4d9d', '#3ddc97', '#4cc9f0', '#b388ff', '#ffb703'];
 
 export async function addProfile(formData: FormData): Promise<void> {
   await requireAdmin();

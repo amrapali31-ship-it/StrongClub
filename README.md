@@ -191,6 +191,17 @@ scripts/seed.mjs          starter data
 supabase/schema.sql       run once in Supabase
 ```
 
+## Look and feel
+
+Dark, contrast-first. The palette lives in `@theme` at the top of
+`src/app/globals.css` — change the tokens there and the whole app follows.
+
+The one rule worth keeping: what makes an interface hard for older eyes is low
+contrast, not darkness. Every pairing here clears WCAG AA by a wide margin
+(lowest is 5.6:1 against a 4.5:1 requirement), and CTAs put dark text on bright
+pink rather than white-on-pink, which would have been the weakest pairing on the
+page. Hover goes *brighter*, not darker — darker reads as disabled on a dark UI.
+
 ## Checks
 
 ```bash

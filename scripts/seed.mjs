@@ -29,8 +29,8 @@ function thisMonday() {
 }
 
 const profiles = [
-  { name: 'Mum', color: '#d6552b' },
-  { name: 'Dad', color: '#2e7d53' },
+  { name: 'Mum', color: '#ff4d9d' },
+  { name: 'Dad', color: '#3ddc97' },
 ].map((p, i) => ({ id: randomUUID(), position: i, created_at: now, ...p }));
 
 const week = {

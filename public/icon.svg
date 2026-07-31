@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="StrongClub">
-  <rect width="512" height="512" rx="112" fill="#d6552b" />
-  <g fill="#ffffff">
+  <rect width="512" height="512" rx="112" fill="#ff4d9d" />
+  <g fill="#0f0e14">
     <rect x="96" y="216" width="56" height="80" rx="20" />
     <rect x="360" y="216" width="56" height="80" rx="20" />
     <rect x="152" y="188" width="64" height="136" rx="26" />

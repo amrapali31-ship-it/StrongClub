@@ -1,28 +1,28 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-label="Sit to stand">
-  <rect width="640" height="360" fill="#fbeae2" />
+  <rect width="640" height="360" fill="#231f2e" />
 
-  <g stroke="#1b1917" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none">
+  <g stroke="#f6f4ff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none">
     <!-- seated -->
     <g transform="translate(90 40)">
       <path d="M40 250h120M60 250v-70h80v70" />
       <path d="M60 180h80" />
-      <circle cx="96" cy="70" r="20" fill="#1b1917" stroke="none" />
+      <circle cx="96" cy="70" r="20" fill="#f6f4ff" stroke="none" />
       <path d="M96 92v58M96 150h44M140 150v40M96 150l-30 34" />
       <path d="M96 110l34 26" />
     </g>
 
     <!-- mid -->
     <g transform="translate(260 40)">
-      <path d="M40 250h120M60 250v-70h80v70" opacity="0.25" />
-      <circle cx="96" cy="48" r="20" fill="#d6552b" stroke="none" />
+      <path d="M40 250h120M60 250v-70h80v70" opacity="0.3" />
+      <circle cx="96" cy="48" r="20" fill="#ff4d9d" stroke="none" />
       <path d="M96 70v52M96 122l24 34M96 122l-26 30M70 152v46M120 156v42" />
       <path d="M96 86l36 8" />
     </g>
 
     <!-- standing -->
     <g transform="translate(430 40)">
-      <path d="M40 250h120M60 250v-70h80v70" opacity="0.25" />
-      <circle cx="96" cy="26" r="20" fill="#1b1917" stroke="none" />
+      <path d="M40 250h120M60 250v-70h80v70" opacity="0.3" />
+      <circle cx="96" cy="26" r="20" fill="#f6f4ff" stroke="none" />
       <path d="M96 48v76M96 124l16 62M96 124l-16 62M96 66l30 30M96 66l-30 30" />
     </g>
   </g>
@@ -34,7 +34,7 @@
     font-family="ui-rounded, system-ui, sans-serif"
     font-size="20"
     font-weight="700"
-    fill="#6f665c"
+    fill="#a9a4ba"
   >
     Stand up slowly, sit down slower
   </text>
