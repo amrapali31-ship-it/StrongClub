@@ -1,12 +1,21 @@
 /**
- * Writes a starter week into the local JSON store so the app has something to
- * show on first run. Safe to re-run: it replaces `.data/db.json` entirely.
+ * Writes a starter week so the app has something to show on first run.
  *
  *   npm run seed
+ *
+ * With no Supabase env vars set this replaces `.data/db.json` outright. With
+ * them set it writes to Supabase instead, but refuses to touch a project that
+ * already has weeks in it unless you pass `--force`.
  */
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+
+import { loadEnv, supabaseFromEnv } from './supabase-env.mjs';
+
+loadEnv();
+const supabase = supabaseFromEnv();
+const force = process.argv.includes('--force');
 
 const FILE = path.join(process.cwd(), '.data', 'db.json');
 const now = new Date().toISOString();
@@ -234,12 +243,48 @@ plan.forEach((entry, workoutIndex) => {
   });
 });
 
-await fs.mkdir(path.dirname(FILE), { recursive: true });
-await fs.writeFile(
-  FILE,
-  JSON.stringify({ profiles, weeks: [week], workouts, exercises, completions: [] }, null, 2),
-);
+const summary = `${profiles.length} people, 1 week, ${workouts.length} workouts, ${exercises.length} exercises`;
 
-console.log(
-  `Seeded ${profiles.length} people, 1 week, ${workouts.length} workouts, ${exercises.length} exercises → .data/db.json`,
-);
+if (supabase) {
+  const { count, error: countError } = await supabase
+    .from('weeks')
+    .select('*', { count: 'exact', head: true });
+
+  if (countError) {
+    console.error(`Could not read the weeks table: ${countError.message}`);
+    console.error('Have you run supabase/schema.sql in the SQL editor yet?');
+    process.exit(1);
+  }
+
+  if (count > 0 && !force) {
+    console.error(
+      `This Supabase project already has ${count} week(s). Refusing to add more.\n` +
+        'Re-run with --force if you really want to add the starter week anyway.',
+    );
+    process.exit(1);
+  }
+
+  // Parents first, then week → workouts → exercises, so foreign keys resolve.
+  for (const [table, rows] of [
+    ['profiles', profiles],
+    ['weeks', [week]],
+    ['workouts', workouts],
+    ['exercises', exercises],
+  ]) {
+    const { error } = await supabase.from(table).insert(rows);
+    if (error) {
+      console.error(`Failed inserting into ${table}: ${error.message}`);
+      process.exit(1);
+    }
+  }
+
+  console.log(`Seeded ${summary} → Supabase`);
+} else {
+  await fs.mkdir(path.dirname(FILE), { recursive: true });
+  await fs.writeFile(
+    FILE,
+    JSON.stringify({ profiles, weeks: [week], workouts, exercises, completions: [] }, null, 2),
+  );
+
+  console.log(`Seeded ${summary} → .data/db.json`);
+}

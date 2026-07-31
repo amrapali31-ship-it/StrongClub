@@ -50,7 +50,25 @@ serverless hosting has no persistent disk, so the JSON store won't survive there
 1. Create a free project at [supabase.com](https://supabase.com).
 2. Open the SQL editor, paste in [`supabase/schema.sql`](supabase/schema.sql), run it.
    That creates the tables and the public `workout-media` bucket.
-3. From **Project Settings → API**, copy the project URL and the **service role** key.
+3. From **Project Settings → API**, copy the project URL and the **service role**
+   key into `.env.local`.
+4. Confirm it's all wired up:
+
+   ```bash
+   npm run check:supabase
+   ```
+
+   That checks every table and the storage bucket, and tells you what's missing.
+   It prints the project URL but never the key.
+
+5. Optionally put the starter week in the real database:
+
+   ```bash
+   npm run seed
+   ```
+
+   With Supabase configured, `seed` writes there instead of to the JSON file, and
+   refuses to run if the project already has weeks (pass `--force` to override).
 
 The service role key bypasses row-level security and is only ever used
 server-side. Never put it in a `NEXT_PUBLIC_*` variable or ship it to the browser.
