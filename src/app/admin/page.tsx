@@ -36,15 +36,7 @@ export default async function AdminHome() {
   return (
     <>
       <section>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-extrabold tracking-tight">Weeks</h1>
-          <Link
-            href="/admin/import"
-            className="rounded-xl border-2 border-brand px-4 py-2 text-sm font-bold text-brand transition hover:bg-brand-tint"
-          >
-            Import with AI
-          </Link>
-        </div>
+        <h1 className="text-3xl font-extrabold tracking-tight">Weeks</h1>
 
         <ul className="mt-4 flex flex-col gap-2">
           {weekSummaries.map(({ week, workouts }) => {
@@ -126,11 +118,16 @@ export default async function AdminHome() {
 
         <ul className="mt-4 flex flex-col gap-2">
           {profiles.map((profile) => (
-            <li key={profile.id} className="card flex items-center gap-3 p-3">
-              <ProfilePhoto profile={profile} save={saveProfilePhoto} />
-              <form action={removeProfile}>
+            <li key={profile.id} className="card flex items-center gap-2 p-3">
+              <div className="min-w-0 flex-1">
+                <ProfilePhoto profile={profile} save={saveProfilePhoto} />
+              </div>
+              <form action={removeProfile} className="shrink-0">
                 <input type="hidden" name="profileId" value={profile.id} />
-                <button type="submit" className="px-2 text-sm font-semibold text-muted hover:text-brand">
+                <button
+                  type="submit"
+                  className="px-2 py-3 text-sm font-semibold text-muted transition hover:text-brand"
+                >
                   Remove
                 </button>
               </form>

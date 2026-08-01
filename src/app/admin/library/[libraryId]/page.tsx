@@ -1,6 +1,6 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import { BackLink } from '@/components/BackLink';
 import { removeLibraryExercise, saveLibraryExercise } from '@/app/admin/actions';
 import { MediaPicker } from '@/components/admin/MediaPicker';
 import { ModeFields } from '@/components/admin/ModeFields';
@@ -31,9 +31,7 @@ export default async function AdminLibraryExercise({
 
   return (
     <>
-      <Link href="/admin/library" className="text-sm font-semibold text-muted hover:text-ink">
-        &larr; Library
-      </Link>
+      <BackLink href="/admin/library" label="Library" />
 
       <form action={saveLibraryExercise} className="card mt-3 p-5">
         <input type="hidden" name="libraryId" value={exercise.id} />

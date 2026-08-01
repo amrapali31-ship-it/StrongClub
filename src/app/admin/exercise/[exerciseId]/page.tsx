@@ -1,6 +1,6 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import { BackLink } from '@/components/BackLink';
 import { removeExercise, saveExercise, saveExerciseToLibrary } from '@/app/admin/actions';
 import { MediaPicker } from '@/components/admin/MediaPicker';
 import { ModeFields } from '@/components/admin/ModeFields';
@@ -36,12 +36,7 @@ export default async function AdminExercise({
 
   return (
     <>
-      <Link
-        href={`/admin/workout/${exercise.workout_id}`}
-        className="text-sm font-semibold text-muted hover:text-ink"
-      >
-        &larr; Back to workout
-      </Link>
+      <BackLink href={`/admin/workout/${exercise.workout_id}`} label="Back to workout" />
 
       <form action={saveExercise} className="card mt-3 p-5">
         <input type="hidden" name="exerciseId" value={exercise.id} />

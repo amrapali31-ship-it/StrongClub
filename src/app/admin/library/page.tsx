@@ -27,7 +27,7 @@ export default async function AdminLibrary() {
         &larr; All weeks
       </Link>
 
-      <h1 className="mt-3 text-2xl font-extrabold tracking-tight">Exercise library</h1>
+      <h1 className="mt-2 text-3xl font-extrabold tracking-tight">Exercise library</h1>
       <p className="mt-1 text-muted">
         Your reusable movements. Add a video here once and every workout you build from it gets the
         video too.

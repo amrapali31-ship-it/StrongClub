@@ -329,10 +329,9 @@ function SectionHeading({
           className="group flex items-center gap-2 text-sm font-bold tracking-widest text-brand uppercase"
         >
           {heading}
-          <span
-            aria-hidden
-            className="text-xs tracking-normal text-muted normal-case opacity-0 transition group-hover:opacity-100"
-          >
+          {/* Always shown, not on hover: there is no hover on a phone, and
+              nothing else says the heading can be tapped. */}
+          <span aria-hidden className="text-xs tracking-normal text-muted normal-case">
             rename
           </span>
         </button>

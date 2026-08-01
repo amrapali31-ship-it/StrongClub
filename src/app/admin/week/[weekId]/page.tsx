@@ -9,6 +9,7 @@ import {
   removeWeek,
   saveWeek,
 } from '@/app/admin/actions';
+import { BackLink } from '@/components/BackLink';
 import { ConfirmSubmit } from '@/components/admin/ConfirmSubmit';
 import { db } from '@/lib/db';
 import { estimateMinutes } from '@/lib/queries';
@@ -33,9 +34,7 @@ export default async function AdminWeek({ params }: { params: Promise<{ weekId: 
 
   return (
     <>
-      <Link href="/admin" className="text-sm font-semibold text-muted hover:text-ink">
-        &larr; All weeks
-      </Link>
+      <BackLink href="/admin" label="All weeks" />
 
       <form action={saveWeek} className="card mt-3 p-5">
         <input type="hidden" name="weekId" value={week.id} />
@@ -89,7 +88,7 @@ export default async function AdminWeek({ params }: { params: Promise<{ weekId: 
       </form>
 
       <section className="mt-8">
-        <h2 className="text-xl font-extrabold tracking-tight">Workouts</h2>
+        <h2 className="text-2xl font-extrabold tracking-tight">Workouts</h2>
         <p className="mt-1 text-muted">
           They can do these in any order. Four is a good number for a week.
         </p>

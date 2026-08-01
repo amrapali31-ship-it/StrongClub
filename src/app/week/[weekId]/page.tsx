@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 
-import { AppHeader } from '@/components/AppHeader';
+import { ParentShell } from '@/components/ParentShell';
 import { WeekBoard } from '@/components/WeekBoard';
 import { getActiveProfileId } from '@/lib/auth';
 import { db } from '@/lib/db';
@@ -27,18 +27,14 @@ export default async function WeekPage({ params }: { params: Promise<{ weekId: s
   const isCurrent = relativeWeekLabel(week.start_date) === 'This week';
 
   return (
-    <>
-      <AppHeader profile={profile} />
+    <ParentShell profile={profile}>
+      <WeekBoard week={week} board={board} previous={previous} next={next} />
 
-      <main className="mx-auto w-full max-w-2xl flex-1 px-5 py-6">
-        <WeekBoard week={week} board={board} previous={previous} next={next} />
-
-        {!isCurrent && (
-          <Link href="/home" className="btn-secondary mt-6 w-full text-base">
-            Back to this week
-          </Link>
-        )}
-      </main>
-    </>
+      {!isCurrent && (
+        <Link href="/home" className="btn-secondary mt-6 w-full text-base">
+          Back to this week
+        </Link>
+      )}
+    </ParentShell>
   );
 }

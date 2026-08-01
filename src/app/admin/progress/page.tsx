@@ -35,7 +35,7 @@ export default async function AdminProgress() {
 
   return (
     <>
-      <h1 className="text-2xl font-extrabold tracking-tight">Progress</h1>
+      <h1 className="text-3xl font-extrabold tracking-tight">Progress</h1>
       <p className="mt-1 text-muted">How each week has gone, per person.</p>
 
       {profiles.length === 0 && (

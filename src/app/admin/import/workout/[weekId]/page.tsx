@@ -1,6 +1,6 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import { BackLink } from '@/components/BackLink';
 import { PlanImporter } from '@/components/admin/PlanImporter';
 import { db } from '@/lib/db';
 import { anthropicConfigured } from '@/lib/importer';
@@ -19,14 +19,9 @@ export default async function AdminImportWorkout({
 
   return (
     <>
-      <Link
-        href={`/admin/week/${week.id}`}
-        className="text-sm font-semibold text-muted hover:text-ink"
-      >
-        &larr; Back to week
-      </Link>
+      <BackLink href={`/admin/week/${week.id}`} label="Back to week" />
 
-      <h1 className="mt-3 text-2xl font-extrabold tracking-tight">Import a workout</h1>
+      <h1 className="mt-2 text-3xl font-extrabold tracking-tight">Import a workout</h1>
       <p className="mt-1 text-muted">
         Paste one session &mdash; or photograph it &mdash; and Claude turns it into a workout in{' '}
         <span className="font-semibold text-ink">{week.title}</span>.

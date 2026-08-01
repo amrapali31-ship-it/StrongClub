@@ -14,6 +14,7 @@ import {
   reorderExercises,
   saveWorkout,
 } from '@/app/admin/actions';
+import { BackLink } from '@/components/BackLink';
 import { ConfirmSubmit } from '@/components/admin/ConfirmSubmit';
 import { EmojiField } from '@/components/admin/EmojiField';
 import { ExerciseReorder } from '@/components/admin/ExerciseReorder';
@@ -57,12 +58,7 @@ export default async function AdminWorkout({
 
   return (
     <>
-      <Link
-        href={`/admin/week/${workout.week_id}`}
-        className="text-sm font-semibold text-muted hover:text-ink"
-      >
-        &larr; Back to week
-      </Link>
+      <BackLink href={`/admin/week/${workout.week_id}`} label="Back to week" />
 
       <form action={saveWorkout} className="card mt-3 p-5">
         <input type="hidden" name="workoutId" value={workout.id} />
@@ -99,7 +95,7 @@ export default async function AdminWorkout({
       </form>
 
       <section className="mt-8">
-        <h2 className="text-xl font-extrabold tracking-tight">Exercises</h2>
+        <h2 className="text-2xl font-extrabold tracking-tight">Exercises</h2>
 
         {groups.length > 0 ? (
           <>

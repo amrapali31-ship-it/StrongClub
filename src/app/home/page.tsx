@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 
-import { AppHeader } from '@/components/AppHeader';
+import { ParentShell } from '@/components/ParentShell';
 import { WeekBoard } from '@/components/WeekBoard';
 import { getActiveProfileId } from '@/lib/auth';
 import { db } from '@/lib/db';
@@ -17,21 +17,17 @@ export default async function Home() {
   const board = current ? await getWeekBoard(current.id, profile.id) : [];
 
   return (
-    <>
-      <AppHeader profile={profile} />
-
-      <main className="mx-auto w-full max-w-2xl flex-1 px-5 py-6">
-        {current ? (
-          <WeekBoard week={current} board={board} previous={previous} next={next} />
-        ) : (
-          <div className="card mt-10 p-8 text-center">
-            <p className="text-xl font-bold">No workouts yet</p>
-            <p className="mt-2 text-muted">
-              Once this week&rsquo;s plan is published it&rsquo;ll show up right here.
-            </p>
-          </div>
-        )}
-      </main>
-    </>
+    <ParentShell profile={profile}>
+      {current ? (
+        <WeekBoard week={current} board={board} previous={previous} next={next} />
+      ) : (
+        <div className="card mt-10 p-8 text-center">
+          <p className="text-xl font-bold">No workouts yet</p>
+          <p className="mt-2 text-muted">
+            Once this week&rsquo;s plan is published it&rsquo;ll show up right here.
+          </p>
+        </div>
+      )}
+    </ParentShell>
   );
 }

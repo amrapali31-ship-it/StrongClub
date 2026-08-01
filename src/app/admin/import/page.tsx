@@ -1,5 +1,5 @@
-import Link from 'next/link';
 
+import { BackLink } from '@/components/BackLink';
 import { PlanImporter } from '@/components/admin/PlanImporter';
 import { anthropicConfigured } from '@/lib/importer';
 
@@ -8,11 +8,9 @@ export const dynamic = 'force-dynamic';
 export default function AdminImport() {
   return (
     <>
-      <Link href="/admin" className="text-sm font-semibold text-muted hover:text-ink">
-        &larr; All weeks
-      </Link>
+      <BackLink href="/admin" label="All weeks" />
 
-      <h1 className="mt-3 text-2xl font-extrabold tracking-tight">Import a week</h1>
+      <h1 className="mt-2 text-3xl font-extrabold tracking-tight">Import a week</h1>
       <p className="mt-1 text-muted">
         Paste a plan or drop in photos, and Claude turns it into workouts you can edit.
       </p>
