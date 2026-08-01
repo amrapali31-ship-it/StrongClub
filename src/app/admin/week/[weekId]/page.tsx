@@ -136,7 +136,23 @@ export default async function AdminWeek({ params }: { params: Promise<{ weekId: 
           )}
         </ul>
 
-        <form action={addWorkout} className="card mt-4 flex items-end gap-3 p-4">
+        <Link
+          href={`/admin/import/workout/${week.id}`}
+          className="card mt-4 flex items-center gap-3 p-4 transition hover:border-ink/25"
+        >
+          <span className="text-2xl" aria-hidden>
+            ✨
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-bold">Add a workout with AI</span>
+            <span className="block text-sm text-muted">
+              Paste one session or a photo of it, and Claude fills in the exercises.
+            </span>
+          </span>
+          <span className="shrink-0 text-sm font-semibold text-brand">Import</span>
+        </Link>
+
+        <form action={addWorkout} className="card mt-3 flex items-end gap-3 p-4">
           <input type="hidden" name="weekId" value={week.id} />
           <div className="flex-1">
             <label htmlFor="workout-title" className="label">

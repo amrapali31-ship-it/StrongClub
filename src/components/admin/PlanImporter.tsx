@@ -2,31 +2,45 @@
 
 import { useRef, useState } from 'react';
 
-import { saveImportedWeek } from '@/app/admin/actions';
-import type { DraftWeek } from '@/lib/importer';
+import { saveImportedWeek, saveImportedWorkout } from '@/app/admin/actions';
+import { EmojiField } from '@/components/admin/EmojiField';
+import type { DraftExercise, DraftWeek, DraftWorkout } from '@/lib/importer';
 import { setsLabel } from '@/lib/media';
 
 type Stage = 'input' | 'working' | 'review';
 
-export function PlanImporter() {
+/** The week a single-workout import is being added to. Absent for a whole plan. */
+export interface ImportTarget {
+  id: string;
+  title: string;
+  published: boolean;
+}
+
+export function PlanImporter({ target }: { target?: ImportTarget }) {
   const [stage, setStage] = useState<Stage>('input');
   const [text, setText] = useState('');
   const [files, setFiles] = useState<File[]>([]);
-  const [draft, setDraft] = useState<DraftWeek | null>(null);
+  const [draft, setDraft] = useState<DraftWeek | DraftWorkout | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
-  async function draftWeek() {
+  const noun = target ? 'workout' : 'week';
+
+  async function askClaude() {
     setStage('working');
     setError(null);
 
     try {
       const body = new FormData();
       body.append('text', text);
+      body.append('scope', noun);
       files.forEach((file) => body.append('images', file));
 
       const response = await fetch('/api/admin/import', { method: 'POST', body });
-      const data = (await response.json()) as { draft?: DraftWeek; error?: string };
+      const data = (await response.json()) as {
+        draft?: DraftWeek | DraftWorkout;
+        error?: string;
+      };
 
       if (!response.ok || !data.draft) throw new Error(data.error ?? 'Import failed.');
 
@@ -39,7 +53,12 @@ export function PlanImporter() {
   }
 
   if (stage === 'review' && draft) {
-    return <ReviewDraft draft={draft} onDiscard={() => setStage('input')} />;
+    const startOver = () => setStage('input');
+    return target ? (
+      <ReviewWorkout draft={draft as DraftWorkout} target={target} onDiscard={startOver} />
+    ) : (
+      <ReviewWeek draft={draft as DraftWeek} onDiscard={startOver} />
+    );
   }
 
   const working = stage === 'working';
@@ -56,7 +75,9 @@ export function PlanImporter() {
         onChange={(e) => setText(e.target.value)}
         disabled={working}
         placeholder={
-          'Paste anything: a plan you wrote in Claude, notes from a physio, a routine off a website.\n\ne.g. "Monday — legs: sit to stand 2x8, heel raises 2x12, standing march 30 sec x2..."'
+          target
+            ? 'Paste one session: what you wrote in Claude, a routine your physio gave you, notes off a website.\n\ne.g. "Legs day — sit to stand 2x8, heel raises 2x12, wall sit 30 sec x2, finish with a quad stretch"'
+            : 'Paste anything: a plan you wrote in Claude, notes from a physio, a routine off a website.\n\ne.g. "Monday — legs: sit to stand 2x8, heel raises 2x12, standing march 30 sec x2..."'
         }
         className="field font-normal"
       />
@@ -82,8 +103,8 @@ export function PlanImporter() {
           : 'Choose photos or screenshots'}
       </button>
       <p className="mt-2 text-sm text-muted">
-        A physio&rsquo;s handout, a screenshot of another app, a photo of something written down.
-        Up to 6 images.
+        A physio&rsquo;s handout, a screenshot of another app, a photo of something written down. Up
+        to 6 images.
       </p>
 
       {error && (
@@ -94,11 +115,11 @@ export function PlanImporter() {
 
       <button
         type="button"
-        onClick={draftWeek}
+        onClick={askClaude}
         disabled={working || (!text.trim() && files.length === 0)}
         className="btn-primary mt-6 w-full disabled:opacity-60"
       >
-        {working ? 'Reading it…' : 'Draft the week'}
+        {working ? 'Reading it…' : `Draft the ${noun}`}
       </button>
 
       {working && (
@@ -110,20 +131,116 @@ export function PlanImporter() {
   );
 }
 
-function ReviewDraft({ draft, onDiscard }: { draft: DraftWeek; onDiscard: () => void }) {
+function CheckFirst({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-xl2 border-2 border-brand bg-brand-tint p-4">
+      <p className="font-bold text-brand">Check this before saving</p>
+      <p className="mt-1 text-sm text-ink/80">
+        This was written by AI from what you gave it. Read the exercises and numbers &mdash;
+        especially if the source was a photo. {children}
+      </p>
+    </div>
+  );
+}
+
+function ExerciseLines({ exercises }: { exercises: DraftExercise[] }) {
+  return (
+    <ul className="mt-3 flex flex-col gap-2">
+      {exercises.map((exercise, i) => (
+        <li key={i} className="border-t border-line pt-2 first:border-0 first:pt-0">
+          <p className="font-semibold">
+            {exercise.name}
+            {exercise.category && (
+              <span className="ml-2 text-xs font-bold tracking-widest text-brand uppercase">
+                {exercise.category}
+              </span>
+            )}
+          </p>
+          <p className="text-sm text-muted">
+            {setsLabel(exercise)}
+            {exercise.equipment && <> &middot; {exercise.equipment}</>}
+          </p>
+          {exercise.instructions && (
+            <p className="mt-1 text-sm whitespace-pre-line text-muted">{exercise.instructions}</p>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function ReviewWorkout({
+  draft,
+  target,
+  onDiscard,
+}: {
+  draft: DraftWorkout;
+  target: ImportTarget;
+  onDiscard: () => void;
+}) {
+  return (
+    <form action={saveImportedWorkout}>
+      <input type="hidden" name="draft" value={JSON.stringify(draft)} />
+      <input type="hidden" name="weekId" value={target.id} />
+
+      <CheckFirst>
+        {target.published ? (
+          <>
+            <span className="font-semibold">{target.title} is live</span>, so this workout shows up
+            for your parents as soon as you save it.
+          </>
+        ) : (
+          <>
+            It goes into <span className="font-semibold">{target.title}</span>, which is still a
+            draft, so nobody sees it until you publish that week.
+          </>
+        )}
+      </CheckFirst>
+
+      <div className="mt-6 grid gap-4 sm:grid-cols-[auto_1fr]">
+        <div>
+          <p className="label">Icon</p>
+          <EmojiField defaultValue="" />
+        </div>
+        <div>
+          <label htmlFor="title" className="label">
+            Workout name
+          </label>
+          <input id="title" name="title" defaultValue={draft.title} className="field" />
+        </div>
+      </div>
+
+      {draft.subtitle && <p className="mt-3 text-base text-muted">{draft.subtitle}</p>}
+
+      <p className="mt-6 text-sm text-muted">
+        {draft.exercises.length} exercise{draft.exercises.length === 1 ? '' : 's'} &middot; no videos
+        attached yet
+      </p>
+
+      <div className="card mt-3 p-4">
+        <ExerciseLines exercises={draft.exercises} />
+      </div>
+
+      <div className="mt-8 flex flex-col gap-3 sm:flex-row-reverse">
+        <button type="submit" className="btn-primary flex-1">
+          Add to {target.title}
+        </button>
+        <button type="button" onClick={onDiscard} className="btn-secondary text-base">
+          Start over
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function ReviewWeek({ draft, onDiscard }: { draft: DraftWeek; onDiscard: () => void }) {
   const total = draft.workouts.reduce((sum, w) => sum + w.exercises.length, 0);
 
   return (
     <form action={saveImportedWeek}>
       <input type="hidden" name="draft" value={JSON.stringify(draft)} />
 
-      <div className="rounded-xl2 border-2 border-brand bg-brand-tint p-4">
-        <p className="font-bold text-brand">Check this before saving</p>
-        <p className="mt-1 text-sm text-ink/80">
-          This was written by AI from what you gave it. Read the exercises and numbers — especially
-          if the source was a photo. It saves as a draft, so nobody sees it until you publish.
-        </p>
-      </div>
+      <CheckFirst>It saves as a draft, so nobody sees it until you publish.</CheckFirst>
 
       <label htmlFor="title" className="label mt-6">
         Week name
@@ -152,23 +269,7 @@ function ReviewDraft({ draft, onDiscard }: { draft: DraftWeek; onDiscard: () => 
           <li key={i} className="card p-4">
             <p className="font-bold">{workout.title}</p>
             {workout.subtitle && <p className="text-sm text-muted">{workout.subtitle}</p>}
-
-            <ul className="mt-3 flex flex-col gap-2">
-              {workout.exercises.map((exercise, j) => (
-                <li key={j} className="border-t border-line pt-2 first:border-0 first:pt-0">
-                  <p className="font-semibold">{exercise.name}</p>
-                  <p className="text-sm text-muted">
-                    {setsLabel(exercise)}
-                    {exercise.equipment && <> &middot; {exercise.equipment}</>}
-                  </p>
-                  {exercise.instructions && (
-                    <p className="mt-1 text-sm whitespace-pre-line text-muted">
-                      {exercise.instructions}
-                    </p>
-                  )}
-                </li>
-              ))}
-            </ul>
+            <ExerciseLines exercises={workout.exercises} />
           </li>
         ))}
       </ul>

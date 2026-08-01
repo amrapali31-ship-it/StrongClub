@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 
 import { checkPasscode, isAdmin, signInAdmin, signOutAdmin } from '@/lib/auth';
 import { db } from '@/lib/db';
-import type { DraftWeek } from '@/lib/importer';
+import type { DraftWeek, DraftWorkout } from '@/lib/importer';
 import { detectMediaType } from '@/lib/media';
 import { closesWorkout, groupExercises, normaliseCategory, opensWorkout } from '@/lib/ordering';
 import { nextWeekSlot } from '@/lib/queries';
@@ -211,6 +211,7 @@ export async function saveImportedWeek(formData: FormData): Promise<void> {
       await db.createExercise({
         workout_id: workout.id,
         name: draftExercise.name || 'Untitled exercise',
+        category: draftExercise.category ?? '',
         equipment: draftExercise.equipment ?? '',
         instructions: draftExercise.instructions ?? '',
         mode,
@@ -229,6 +230,63 @@ export async function saveImportedWeek(formData: FormData): Promise<void> {
 
   revalidatePath('/admin');
   redirect(`/admin/week/${week.id}`);
+}
+
+/**
+ * Turns a reviewed AI draft into one workout inside a week that already
+ * exists — the workout-at-a-time counterpart to importing a whole plan.
+ *
+ * Unlike the week import there's no draft state to hide behind: if the week is
+ * already published, this workout is visible the moment it saves. The review
+ * screen says so before you press the button.
+ */
+export async function saveImportedWorkout(formData: FormData): Promise<void> {
+  await requireAdmin();
+
+  const weekId = str(formData, 'weekId');
+  const week = await db.getWeek(weekId);
+  if (!week) redirect('/admin');
+
+  let draft: DraftWorkout;
+  try {
+    draft = JSON.parse(str(formData, 'draft')) as DraftWorkout;
+  } catch {
+    redirect(`/admin/week/${weekId}`);
+  }
+
+  const siblings = await db.listWorkouts(weekId);
+  const workout = await db.createWorkout({
+    week_id: weekId,
+    title: str(formData, 'title') || draft.title || 'Imported workout',
+    emoji: str(formData, 'emoji'),
+    subtitle: draft.subtitle ?? '',
+    position: siblings.length,
+  });
+
+  for (const [index, draftExercise] of draft.exercises.entries()) {
+    const mode: ExerciseMode = draftExercise.mode === 'time' ? 'time' : 'reps';
+    await db.createExercise({
+      workout_id: workout.id,
+      name: draftExercise.name || 'Untitled exercise',
+      category: draftExercise.category ?? '',
+      equipment: draftExercise.equipment ?? '',
+      instructions: draftExercise.instructions ?? '',
+      mode,
+      sets: Math.max(1, Math.round(draftExercise.sets || 1)),
+      reps: mode === 'reps' ? Math.max(1, Math.round(draftExercise.reps ?? 10)) : null,
+      duration_seconds:
+        mode === 'time' ? Math.max(1, Math.round(draftExercise.duration_seconds ?? 30)) : null,
+      rest_seconds: Math.max(0, Math.round(draftExercise.rest_seconds ?? 30)),
+      // Media is never imported — models invent plausible-looking video links.
+      media_type: 'none',
+      media_url: '',
+      position: index,
+    });
+  }
+
+  revalidatePath(`/admin/week/${weekId}`);
+  revalidatePath('/home');
+  redirect(`/admin/workout/${workout.id}`);
 }
 
 /* --------------------------------------------------------------- workouts */

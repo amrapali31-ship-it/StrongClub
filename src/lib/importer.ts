@@ -4,6 +4,8 @@ import type { ExerciseMode } from '@/lib/types';
 
 export interface DraftExercise {
   name: string;
+  /** Section heading, e.g. "Warm-up" or "Legs". Empty when the source has none. */
+  category: string;
   equipment: string;
   instructions: string;
   mode: ExerciseMode;
@@ -32,6 +34,72 @@ export const MAX_IMPORT_IMAGE_BYTES = 5 * 1024 * 1024;
 
 const nullableInteger = { anyOf: [{ type: 'integer' }, { type: 'null' }] };
 
+const EXERCISE_SCHEMA = {
+  type: 'object',
+  properties: {
+    name: { type: 'string' },
+    category: {
+      type: 'string',
+      description:
+        "The part of the session this belongs to — 'Warm-up', 'Legs', 'Upper body', 'Core', 'Balance', 'Mobility', 'Cardio', 'Cool-down'. Use the source's own grouping when it has one. Empty string if the source gives no grouping at all.",
+    },
+    equipment: {
+      type: 'string',
+      description:
+        "What the exercise needs — 'Dumbbells', 'Chair', 'Resistance band', 'Cable machine'. Use 'Body weight' when nothing is needed. Empty string only if the source is genuinely unclear.",
+    },
+    instructions: {
+      type: 'string',
+      description:
+        'How to perform the exercise, in plain language. Empty string if the source gives none — do not invent technique cues.',
+    },
+    mode: {
+      type: 'string',
+      enum: ['reps', 'time'],
+      description: "'reps' for counted repetitions, 'time' for a hold or duration.",
+    },
+    sets: { type: 'integer', description: 'Number of sets. Use 1 if unspecified.' },
+    reps: { ...nullableInteger, description: "Reps per set. Null when mode is 'time'." },
+    duration_seconds: {
+      ...nullableInteger,
+      description: "Seconds to hold or perform. Null when mode is 'reps'.",
+    },
+    rest_seconds: {
+      type: 'integer',
+      description: 'Rest after each set. Use 30 if unspecified.',
+    },
+  },
+  required: [
+    'name',
+    'category',
+    'equipment',
+    'instructions',
+    'mode',
+    'sets',
+    'reps',
+    'duration_seconds',
+    'rest_seconds',
+  ],
+  additionalProperties: false,
+} as const;
+
+const WORKOUT_PROPERTIES = {
+  title: { type: 'string' },
+  subtitle: {
+    type: 'string',
+    description: 'Short description of the workout. Empty string if none is implied.',
+  },
+  exercises: { type: 'array', items: EXERCISE_SCHEMA },
+} as const;
+
+/** One workout on its own, for importing into a week that already exists. */
+const WORKOUT_SCHEMA = {
+  type: 'object',
+  properties: WORKOUT_PROPERTIES,
+  required: ['title', 'subtitle', 'exercises'],
+  additionalProperties: false,
+} as const;
+
 /**
  * Structured-output schema. Every field is required and `additionalProperties`
  * is false throughout, which is what lets the API guarantee the shape rather
@@ -51,58 +119,7 @@ const WEEK_SCHEMA = {
       description: 'One entry per workout session in the plan.',
       items: {
         type: 'object',
-        properties: {
-          title: { type: 'string' },
-          subtitle: {
-            type: 'string',
-            description: 'Short description of the workout. Empty string if none is implied.',
-          },
-          exercises: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                name: { type: 'string' },
-                equipment: {
-                  type: 'string',
-                  description:
-                    "What the exercise needs — 'Dumbbells', 'Chair', 'Resistance band', 'Cable machine'. Use 'Body weight' when nothing is needed. Empty string only if the source is genuinely unclear.",
-                },
-                instructions: {
-                  type: 'string',
-                  description:
-                    'How to perform the exercise, in plain language. Empty string if the source gives none — do not invent technique cues.',
-                },
-                mode: {
-                  type: 'string',
-                  enum: ['reps', 'time'],
-                  description: "'reps' for counted repetitions, 'time' for a hold or duration.",
-                },
-                sets: { type: 'integer', description: 'Number of sets. Use 1 if unspecified.' },
-                reps: { ...nullableInteger, description: "Reps per set. Null when mode is 'time'." },
-                duration_seconds: {
-                  ...nullableInteger,
-                  description: "Seconds to hold or perform. Null when mode is 'reps'.",
-                },
-                rest_seconds: {
-                  type: 'integer',
-                  description: 'Rest after each set. Use 30 if unspecified.',
-                },
-              },
-              required: [
-                'name',
-                'equipment',
-                'instructions',
-                'mode',
-                'sets',
-                'reps',
-                'duration_seconds',
-                'rest_seconds',
-              ],
-              additionalProperties: false,
-            },
-          },
-        },
+        properties: WORKOUT_PROPERTIES,
         required: ['title', 'subtitle', 'exercises'],
         additionalProperties: false,
       },
@@ -131,11 +148,12 @@ export interface ImportInput {
   images: { mediaType: string; base64: string }[];
 }
 
-/**
- * Sends the pasted text and/or images to Claude and returns a structured week.
- * The result is always reviewed by the coach before it reaches anyone.
- */
-export async function draftWeekFromSources(input: ImportInput): Promise<DraftWeek> {
+/** Shared plumbing: same model, same rules, different shape of answer. */
+async function draftFromSources<T>(
+  input: ImportInput,
+  schema: Record<string, unknown>,
+  instruction: string,
+): Promise<T> {
   if (!anthropicConfigured()) {
     throw new Error('No ANTHROPIC_API_KEY is set on this deployment.');
   }
@@ -150,8 +168,8 @@ export async function draftWeekFromSources(input: ImportInput): Promise<DraftWee
   content.push({
     type: 'text',
     text: input.text.trim()
-      ? `Turn this into a structured week of workouts:\n\n${input.text.trim()}`
-      : 'Turn the attached image(s) into a structured week of workouts.',
+      ? `${instruction}:\n\n${input.text.trim()}`
+      : `${instruction}. The source is the attached image(s).`,
   });
 
   const response = await client.beta.messages.create({
@@ -164,7 +182,7 @@ export async function draftWeekFromSources(input: ImportInput): Promise<DraftWee
     system: SYSTEM_PROMPT,
     output_config: {
       effort: 'medium',
-      format: { type: 'json_schema', schema: WEEK_SCHEMA },
+      format: { type: 'json_schema', schema },
     },
     messages: [{ role: 'user', content }],
   });
@@ -173,7 +191,7 @@ export async function draftWeekFromSources(input: ImportInput): Promise<DraftWee
     throw new Error('Claude declined to process that input. Try rewording or a different source.');
   }
   if (response.stop_reason === 'max_tokens') {
-    throw new Error('That plan was too long to process in one go. Try importing one week at a time.');
+    throw new Error('That plan was too long to process in one go. Try a smaller piece of it.');
   }
 
   const text = response.content.find((block) => block.type === 'text');
@@ -181,9 +199,40 @@ export async function draftWeekFromSources(input: ImportInput): Promise<DraftWee
     throw new Error('Claude returned no usable output.');
   }
 
-  const draft = JSON.parse(text.text) as DraftWeek;
+  return JSON.parse(text.text) as T;
+}
+
+/**
+ * Turns the pasted text and/or images into a whole week. The result is always
+ * reviewed by the coach before it reaches anyone.
+ */
+export async function draftWeekFromSources(input: ImportInput): Promise<DraftWeek> {
+  const draft = await draftFromSources<DraftWeek>(
+    input,
+    WEEK_SCHEMA,
+    'Turn this into a structured week of workouts',
+  );
+
   if (!draft.workouts?.length) {
     throw new Error('No workouts could be found in what you provided.');
+  }
+
+  return draft;
+}
+
+/**
+ * The same, for one session at a time — for when you're filling a week in
+ * workout by workout rather than importing a whole plan at once.
+ */
+export async function draftWorkoutFromSources(input: ImportInput): Promise<DraftWorkout> {
+  const draft = await draftFromSources<DraftWorkout>(
+    input,
+    WORKOUT_SCHEMA,
+    'Turn this into one structured workout. Everything described belongs to a single session, even if it is written as several parts or rounds',
+  );
+
+  if (!draft.exercises?.length) {
+    throw new Error('No exercises could be found in what you provided.');
   }
 
   return draft;

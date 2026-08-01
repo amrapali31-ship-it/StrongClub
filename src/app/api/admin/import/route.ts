@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { isAdmin } from '@/lib/auth';
 import {
   draftWeekFromSources,
+  draftWorkoutFromSources,
   IMPORT_IMAGE_TYPES,
   MAX_IMPORT_IMAGES,
   MAX_IMPORT_IMAGE_BYTES,
@@ -18,6 +19,8 @@ export async function POST(request: Request) {
 
   const formData = await request.formData();
   const text = String(formData.get('text') ?? '');
+  // One workout at a time, or a whole plan. Same input, different shape back.
+  const scope = formData.get('scope') === 'workout' ? 'workout' : 'week';
   const files = formData.getAll('images').filter((f): f is File => f instanceof File && f.size > 0);
 
   if (!text.trim() && files.length === 0) {
@@ -55,7 +58,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    const draft = await draftWeekFromSources({ text, images });
+    const draft =
+      scope === 'workout'
+        ? await draftWorkoutFromSources({ text, images })
+        : await draftWeekFromSources({ text, images });
     return NextResponse.json({ draft });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Something went wrong.';
