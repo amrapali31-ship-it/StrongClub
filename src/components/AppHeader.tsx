@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { switchProfile } from '@/app/actions';
+import { Avatar } from '@/components/Avatar';
 import type { Profile } from '@/lib/types';
 
 export function AppHeader({ profile }: { profile: Profile }) {
@@ -16,12 +17,7 @@ export function AppHeader({ profile }: { profile: Profile }) {
             type="submit"
             className="flex items-center gap-2 rounded-full border border-line bg-surface py-1.5 pr-3 pl-1.5 text-sm font-semibold transition hover:border-ink/25"
           >
-            <span
-              className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold text-white"
-              style={{ backgroundColor: profile.color }}
-            >
-              {profile.name.slice(0, 1).toUpperCase()}
-            </span>
+            <Avatar profile={profile} size="sm" />
             {profile.name}
           </button>
         </form>

@@ -112,6 +112,12 @@ function WorkoutCard({ item }: { item: WorkoutProgress }) {
       href={`/workout/${workout.id}`}
       className="card flex items-center gap-4 p-4 transition hover:border-ink/25 active:scale-[0.99]"
     >
+      {workout.emoji && (
+        <span className="shrink-0 text-3xl leading-none" aria-hidden>
+          {workout.emoji}
+        </span>
+      )}
+
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <h2 className="text-xl font-bold">{workout.title}</h2>

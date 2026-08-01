@@ -103,7 +103,10 @@ export default async function AdminWeek({ params }: { params: Promise<{ weekId: 
               </div>
 
               <Link href={`/admin/workout/${workout.id}`} className="min-w-0 flex-1">
-                <p className="truncate font-bold">{workout.title}</p>
+                <p className="truncate font-bold">
+                  {workout.emoji && <span className="mr-1.5">{workout.emoji}</span>}
+                  {workout.title}
+                </p>
                 <p className="text-sm text-muted">
                   {count} {count === 1 ? 'exercise' : 'exercises'} &middot; about {minutes} min
                 </p>

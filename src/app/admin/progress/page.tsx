@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+import { Avatar } from '@/components/Avatar';
 import { formatWeek } from '@/components/WeekBoard';
 import { db } from '@/lib/db';
 import { getWeekBoard } from '@/lib/queries';
@@ -57,12 +58,7 @@ export default async function AdminProgress() {
                 {perProfile.map(({ profile, total, done, started }) => (
                   <li key={profile.id}>
                     <div className="flex items-center gap-3">
-                      <span
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
-                        style={{ backgroundColor: profile.color }}
-                      >
-                        {profile.name.slice(0, 1).toUpperCase()}
-                      </span>
+                      <Avatar profile={profile} />
 
                       <span className="flex-1 truncate font-semibold">{profile.name}</span>
 

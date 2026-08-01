@@ -10,6 +10,7 @@ import {
   reorderExercises,
   saveWorkout,
 } from '@/app/admin/actions';
+import { EmojiField } from '@/components/admin/EmojiField';
 import { ExerciseReorder } from '@/components/admin/ExerciseReorder';
 import { db } from '@/lib/db';
 import { groupExercises, shouldShowGroupHeadings } from '@/lib/queries';
@@ -58,10 +59,20 @@ export default async function AdminWorkout({
       <form action={saveWorkout} className="card mt-3 p-5">
         <input type="hidden" name="workoutId" value={workout.id} />
 
-        <label htmlFor="title" className="label">
-          Workout name
-        </label>
-        <input id="title" name="title" defaultValue={workout.title} className="field" />
+        <div className="grid gap-4 sm:grid-cols-[auto_1fr]">
+          <div>
+            <label htmlFor="emoji" className="label">
+              Icon
+            </label>
+            <EmojiField defaultValue={workout.emoji} />
+          </div>
+          <div>
+            <label htmlFor="title" className="label">
+              Workout name
+            </label>
+            <input id="title" name="title" defaultValue={workout.title} className="field" />
+          </div>
+        </div>
 
         <label htmlFor="subtitle" className="label mt-4">
           Short description (optional)

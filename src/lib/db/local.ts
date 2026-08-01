@@ -99,6 +99,7 @@ export const localDb: Database = {
         id: randomUUID(),
         name: data.name,
         color: data.color,
+        photo_url: '',
         position: nextPosition(d.profiles),
         created_at: new Date().toISOString(),
       };
@@ -187,6 +188,7 @@ export const localDb: Database = {
         id: randomUUID(),
         week_id: data.week_id,
         title: data.title,
+        emoji: data.emoji ?? '',
         subtitle: data.subtitle ?? '',
         position: data.position ?? nextPosition(siblings),
         created_at: new Date().toISOString(),

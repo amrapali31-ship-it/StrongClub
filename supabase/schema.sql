@@ -67,6 +67,11 @@ create table if not exists library_exercises (
 -- Safe to re-run; does nothing if the column is already there.
 alter table exercises add column if not exists category text not null default '';
 
+-- Added later: a photo for each person, and an emoji per workout.
+-- Safe to re-run; both do nothing if the column already exists.
+alter table profiles add column if not exists photo_url text not null default '';
+alter table workouts add column if not exists emoji text not null default '';
+
 create table if not exists exercise_completions (
   id uuid primary key default gen_random_uuid(),
   profile_id uuid not null references profiles (id) on delete cascade,

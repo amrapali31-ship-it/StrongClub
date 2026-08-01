@@ -45,7 +45,14 @@ export default async function WorkoutOverview({
           &larr; Back
         </Link>
 
-        <h1 className="mt-3 text-3xl font-extrabold tracking-tight">{workout.title}</h1>
+        <h1 className="mt-3 flex items-center gap-3 text-3xl font-extrabold tracking-tight">
+          {workout.emoji && (
+            <span className="text-4xl leading-none" aria-hidden>
+              {workout.emoji}
+            </span>
+          )}
+          {workout.title}
+        </h1>
         {workout.subtitle && <p className="mt-2 text-lg text-muted">{workout.subtitle}</p>}
 
         <p className="mt-3 text-base text-muted">

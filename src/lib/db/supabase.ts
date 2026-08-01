@@ -135,6 +135,7 @@ export const supabaseDb: Database = {
         .insert({
           week_id: data.week_id,
           title: data.title,
+          emoji: data.emoji ?? '',
           subtitle: data.subtitle ?? '',
           position: data.position ?? count ?? 0,
         })

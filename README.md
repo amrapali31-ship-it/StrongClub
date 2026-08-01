@@ -87,6 +87,7 @@ server-side. Never put it in a `NEXT_PUBLIC_*` variable or ship it to the browse
    | `SUPABASE_SERVICE_ROLE_KEY` | From Supabase |
 
 4. Deploy, then open `/admin` on the live URL and add your parents under **People**.
+   Tap someone's avatar there to give them a photo instead of a coloured initial.
 
 Send them the base URL — not the `/admin` one.
 
@@ -103,6 +104,7 @@ don't put anything sensitive in the exercise notes.
 1. `/admin` → **Repeat last week** (copies everything across) or **Start Week N
    empty**. Either way it names and dates itself; rename it if you care.
 2. Add workouts to it — four a week is the shape the copy assumes, but any number works.
+   Each one can carry an emoji (🦵, 💪) shown beside its name.
 3. Open each workout, add exercises. Per exercise you set:
    - reps, or a hold in seconds
    - sets and rest between them

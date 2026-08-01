@@ -5,6 +5,8 @@ export interface Profile {
   id: string;
   name: string;
   color: string;
+  /** Uploaded photo. Falls back to the coloured initial when empty. */
+  photo_url: string;
   position: number;
   created_at: string;
 }
@@ -23,6 +25,8 @@ export interface Workout {
   id: string;
   week_id: string;
   title: string;
+  /** One or two characters shown beside the title. Empty for none. */
+  emoji: string;
   subtitle: string;
   position: number;
   created_at: string;

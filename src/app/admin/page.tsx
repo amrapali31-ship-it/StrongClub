@@ -1,6 +1,13 @@
 import Link from 'next/link';
 
-import { addProfile, addWeek, removeProfile, repeatLastWeek } from '@/app/admin/actions';
+import {
+  addProfile,
+  addWeek,
+  removeProfile,
+  repeatLastWeek,
+  saveProfilePhoto,
+} from '@/app/admin/actions';
+import { ProfilePhoto } from '@/components/admin/ProfilePhoto';
 import { formatWeek } from '@/components/WeekBoard';
 import { db, usingSupabase } from '@/lib/db';
 import { nextWeekSlot, relativeWeekLabel } from '@/lib/queries';
@@ -120,13 +127,7 @@ export default async function AdminHome() {
         <ul className="mt-4 flex flex-col gap-2">
           {profiles.map((profile) => (
             <li key={profile.id} className="card flex items-center gap-3 p-3">
-              <span
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-bold text-white"
-                style={{ backgroundColor: profile.color }}
-              >
-                {profile.name.slice(0, 1).toUpperCase()}
-              </span>
-              <span className="flex-1 font-semibold">{profile.name}</span>
+              <ProfilePhoto profile={profile} save={saveProfilePhoto} />
               <form action={removeProfile}>
                 <input type="hidden" name="profileId" value={profile.id} />
                 <button type="submit" className="px-2 text-sm font-semibold text-muted hover:text-brand">

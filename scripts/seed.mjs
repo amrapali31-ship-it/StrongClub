@@ -29,8 +29,8 @@ function thisMonday() {
 }
 
 const profiles = [
-  { name: 'Mum', color: '#ff4d9d' },
-  { name: 'Dad', color: '#3ddc97' },
+  { name: 'Mum', color: '#ff4d9d', photo_url: '' },
+  { name: 'Dad', color: '#3ddc97', photo_url: '' },
 ].map((p, i) => ({ id: randomUUID(), position: i, created_at: now, ...p }));
 
 const week = {
@@ -45,6 +45,7 @@ const week = {
 const plan = [
   {
     title: 'Legs & balance',
+    emoji: '🦵',
     subtitle: 'Chair-based strength for hips and knees',
     exercises: [
       {
@@ -93,6 +94,7 @@ const plan = [
   },
   {
     title: 'Upper body',
+    emoji: '💪',
     subtitle: 'Arms, shoulders and posture',
     exercises: [
       {
@@ -138,6 +140,7 @@ const plan = [
   },
   {
     title: 'Gentle mobility',
+    emoji: '🧘',
     subtitle: 'Loosening up — good for a stiff morning',
     exercises: [
       {
@@ -182,6 +185,7 @@ const plan = [
   },
   {
     title: 'Walk & breathe',
+    emoji: '🚶',
     subtitle: 'Get outside if the weather is kind',
     exercises: [
       {
@@ -234,6 +238,7 @@ plan.forEach((entry, workoutIndex) => {
     id: randomUUID(),
     week_id: week.id,
     title: entry.title,
+    emoji: entry.emoji ?? '',
     subtitle: entry.subtitle,
     position: workoutIndex,
     created_at: now,

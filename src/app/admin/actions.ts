@@ -59,6 +59,16 @@ export async function addProfile(formData: FormData): Promise<void> {
   revalidatePath('/admin');
 }
 
+/** Sets or clears a person's photo. The URL comes back from /api/upload. */
+export async function saveProfilePhoto(formData: FormData): Promise<void> {
+  await requireAdmin();
+  await db.updateProfile(str(formData, 'profileId'), { photo_url: str(formData, 'photo_url') });
+
+  revalidatePath('/admin');
+  revalidatePath('/');
+  revalidatePath('/home');
+}
+
 export async function removeProfile(formData: FormData): Promise<void> {
   await requireAdmin();
   await db.deleteProfile(str(formData, 'profileId'));
@@ -98,6 +108,7 @@ export async function repeatLastWeek(): Promise<void> {
     const newWorkout = await db.createWorkout({
       week_id: copy.id,
       title: workout.title,
+      emoji: workout.emoji,
       subtitle: workout.subtitle,
       position: workout.position,
     });
@@ -150,6 +161,7 @@ export async function duplicateWeek(formData: FormData): Promise<void> {
     const newWorkout = await db.createWorkout({
       week_id: copy.id,
       title: workout.title,
+      emoji: workout.emoji,
       subtitle: workout.subtitle,
       position: workout.position,
     });
@@ -234,6 +246,9 @@ export async function saveWorkout(formData: FormData): Promise<void> {
 
   const workout = await db.updateWorkout(id, {
     title: str(formData, 'title') || 'Untitled workout',
+    // Two characters is enough for any single emoji, including the ones built
+    // from a base plus a skin-tone or variation selector.
+    emoji: [...str(formData, 'emoji')].slice(0, 2).join(''),
     subtitle: str(formData, 'subtitle'),
   });
 
