@@ -9,6 +9,7 @@ import {
   removeWeek,
   saveWeek,
 } from '@/app/admin/actions';
+import { ConfirmSubmit } from '@/components/admin/ConfirmSubmit';
 import { db } from '@/lib/db';
 import { estimateMinutes } from '@/lib/queries';
 
@@ -27,6 +28,8 @@ export default async function AdminWeek({ params }: { params: Promise<{ weekId: 
       return { workout, count: exercises.length, minutes: estimateMinutes(exercises) };
     }),
   );
+
+  const totalExercises = withCounts.reduce((sum, entry) => sum + entry.count, 0);
 
   return (
     <>
@@ -181,9 +184,15 @@ export default async function AdminWeek({ params }: { params: Promise<{ weekId: 
 
         <form action={removeWeek} className="sm:ml-auto">
           <input type="hidden" name="weekId" value={week.id} />
-          <button type="submit" className="btn-ghost text-base hover:text-brand">
-            Delete week
-          </button>
+          <ConfirmSubmit
+            label="Delete week"
+            question={`Delete ${week.title}?`}
+            consequence={
+              totalExercises > 0
+                ? `Its ${workouts.length} workout${workouts.length === 1 ? '' : 's'} and all ${totalExercises} exercises go with it. Nothing can bring them back — your uploaded videos survive, but everything you typed does not.`
+                : 'This week is empty, so nothing else goes with it.'
+            }
+          />
         </form>
       </section>
     </>

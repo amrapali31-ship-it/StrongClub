@@ -14,6 +14,7 @@ import {
   reorderExercises,
   saveWorkout,
 } from '@/app/admin/actions';
+import { ConfirmSubmit } from '@/components/admin/ConfirmSubmit';
 import { EmojiField } from '@/components/admin/EmojiField';
 import { ExerciseReorder } from '@/components/admin/ExerciseReorder';
 import { db } from '@/lib/db';
@@ -221,9 +222,15 @@ export default async function AdminWorkout({
 
         <form action={removeWorkout} className="sm:ml-auto">
           <input type="hidden" name="workoutId" value={workout.id} />
-          <button type="submit" className="btn-ghost text-base hover:text-brand">
-            Delete workout
-          </button>
+          <ConfirmSubmit
+            label="Delete workout"
+            question={`Delete ${workout.title}?`}
+            consequence={
+              exercises.length > 0
+                ? `All ${exercises.length} exercise${exercises.length === 1 ? '' : 's'} in it go too, and there's no undo.`
+                : 'This workout is empty, so nothing else goes with it.'
+            }
+          />
         </form>
       </section>
     </>

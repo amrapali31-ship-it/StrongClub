@@ -48,3 +48,6 @@ public/uploads/
 
 # The example file carries no secrets and documents the required vars.
 !.env.example
+
+# Database snapshots — your data, not the app.
+backups/

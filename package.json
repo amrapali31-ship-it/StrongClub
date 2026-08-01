@@ -12,6 +12,8 @@
     "seed:library": "node scripts/seed-library.mjs",
     "backfill:categories": "node scripts/backfill-categories.mjs",
     "backfill:equipment": "node scripts/backfill-equipment.mjs",
+    "backup": "node scripts/backup.mjs",
+    "restore": "node scripts/restore.mjs",
     "icons": "node scripts/build-icons.mjs"
   },
   "dependencies": {
