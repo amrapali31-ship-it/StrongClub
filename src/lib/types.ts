@@ -47,6 +47,11 @@ export interface Exercise {
    * the workout page. Empty for one-offs typed straight in.
    */
   category: string;
+  /**
+   * What you need to hand — "Dumbbells", "Chair", "Cable machine". Free text,
+   * empty when nothing is needed beyond yourself.
+   */
+  equipment: string;
   instructions: string;
   mode: ExerciseMode;
   sets: number;
@@ -79,6 +84,23 @@ export const EXERCISE_CATEGORIES = [
 export type ExerciseCategory = (typeof EXERCISE_CATEGORIES)[number];
 
 /**
+ * Suggested kit, offered in the pickers. Free text like the sections, so a
+ * machine at their gym that isn't listed here is still fine to type in.
+ */
+export const EQUIPMENT_OPTIONS = [
+  'Body weight',
+  'Chair',
+  'Wall',
+  'Dumbbells',
+  'Resistance band',
+  'Kettlebell',
+  'Barbell',
+  'Cable machine',
+  'Mat',
+  'Step',
+] as const;
+
+/**
  * A reusable movement. Workouts copy from these rather than referencing them,
  * so editing a library entry never rewrites a week your parents already did —
  * but new workouts inherit its defaults and, importantly, its video.
@@ -87,6 +109,7 @@ export interface LibraryExercise {
   id: string;
   name: string;
   category: string;
+  equipment: string;
   instructions: string;
   mode: ExerciseMode;
   sets: number;

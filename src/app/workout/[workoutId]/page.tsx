@@ -36,6 +36,11 @@ export default async function WorkoutOverview({
   // Numbered by where things actually appear, not by stored position — moving a
   // section around shouldn't leave the list counting 3, 4, 1, 2.
   const running = groups.flatMap((group) => group.exercises);
+
+  // One line at the top so they can fetch everything before starting rather
+  // than getting up halfway through. Order follows the workout, not the
+  // alphabet, so the first thing listed is the first thing needed.
+  const kit = [...new Set(running.map((e) => (e.equipment ?? '').trim()).filter(Boolean))];
   const showHeadings = shouldShowGroupHeadings(groups);
 
   return (
@@ -71,6 +76,13 @@ export default async function WorkoutOverview({
           )}
         </p>
 
+        {kit.length > 0 && (
+          <p className="mt-4 text-base">
+            <span className="font-semibold">You&rsquo;ll need:</span>{' '}
+            <span className="text-muted">{kit.join(' · ')}</span>
+          </p>
+        )}
+
         <p className="mt-4 text-base text-muted">
           Work down the list at your own pace. Tick things off if you like &mdash; it&rsquo;s just
           so you can see where you got to.
@@ -105,6 +117,9 @@ export default async function WorkoutOverview({
                     <p className="mt-0.5 text-lg font-semibold text-brand">
                       {setsLabel(exercise)}
                     </p>
+                    {exercise.equipment && (
+                      <p className="mt-1 text-base text-muted">{exercise.equipment}</p>
+                    )}
                   </div>
 
                   <form action={toggleExerciseForm} className="shrink-0">

@@ -4,6 +4,7 @@ import type { ExerciseMode } from '@/lib/types';
 
 export interface DraftExercise {
   name: string;
+  equipment: string;
   instructions: string;
   mode: ExerciseMode;
   sets: number;
@@ -62,6 +63,11 @@ const WEEK_SCHEMA = {
               type: 'object',
               properties: {
                 name: { type: 'string' },
+                equipment: {
+                  type: 'string',
+                  description:
+                    "What the exercise needs — 'Dumbbells', 'Chair', 'Resistance band', 'Cable machine'. Use 'Body weight' when nothing is needed. Empty string only if the source is genuinely unclear.",
+                },
                 instructions: {
                   type: 'string',
                   description:
@@ -85,6 +91,7 @@ const WEEK_SCHEMA = {
               },
               required: [
                 'name',
+                'equipment',
                 'instructions',
                 'mode',
                 'sets',

@@ -5,7 +5,7 @@ import { removeExercise, saveExercise, saveExerciseToLibrary } from '@/app/admin
 import { MediaPicker } from '@/components/admin/MediaPicker';
 import { ModeFields } from '@/components/admin/ModeFields';
 import { db } from '@/lib/db';
-import { EXERCISE_CATEGORIES } from '@/lib/types';
+import { EQUIPMENT_OPTIONS, EXERCISE_CATEGORIES } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,6 +22,14 @@ export default async function AdminExercise({
   const library = await db.listLibrary();
   const sectionSuggestions = [
     ...new Set([...EXERCISE_CATEGORIES, ...library.map((e) => e.category)]),
+  ]
+    .filter(Boolean)
+    .sort();
+
+  // Whatever's already in use, so the second dumbbell exercise offers the same
+  // wording as the first rather than inviting a near-miss.
+  const equipmentSuggestions = [
+    ...new Set([...EQUIPMENT_OPTIONS, ...library.map((e) => e.equipment ?? '')]),
   ]
     .filter(Boolean)
     .sort();
@@ -70,6 +78,32 @@ export default async function AdminExercise({
           Exercises sharing a section are grouped together under a heading when your parents open
           the workout. Type anything &mdash; leave it blank for no section.
         </p>
+
+
+        <div className="mt-4">
+          <label htmlFor="equipment" className="label">
+            Equipment
+          </label>
+          {/* Free text with suggestions, same as the section — a machine at
+              their gym that isn't on the list is still fine to type. */}
+          <input
+            id="equipment"
+            name="equipment"
+            defaultValue={exercise.equipment ?? ''}
+            list="equipment-suggestions"
+            placeholder="e.g. Dumbbells"
+            className="field"
+          />
+          <datalist id="equipment-suggestions">
+            {equipmentSuggestions.map((item) => (
+              <option key={item} value={item} />
+            ))}
+          </datalist>
+          <p className="mt-2 text-sm text-muted">
+            Shown on the exercise, and gathered into a &ldquo;you&rsquo;ll need&rdquo; list at the
+            top of the workout. Leave it blank if there&rsquo;s nothing to fetch.
+          </p>
+        </div>
 
         <div className="mt-5">
           <ModeFields exercise={exercise} />

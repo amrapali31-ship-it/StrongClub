@@ -183,6 +183,7 @@ export const supabaseDb: Database = {
           workout_id: data.workout_id,
           name: data.name,
           category: data.category ?? '',
+          equipment: data.equipment ?? '',
           instructions: data.instructions ?? '',
           mode: data.mode ?? 'reps',
           sets: data.sets ?? 1,
@@ -233,6 +234,7 @@ export const supabaseDb: Database = {
         .insert({
           name: data.name,
           category: data.category,
+          equipment: data.equipment ?? '',
           instructions: data.instructions ?? '',
           mode: data.mode ?? 'reps',
           sets: data.sets ?? 2,

@@ -5,7 +5,7 @@ import { removeLibraryExercise, saveLibraryExercise } from '@/app/admin/actions'
 import { MediaPicker } from '@/components/admin/MediaPicker';
 import { ModeFields } from '@/components/admin/ModeFields';
 import { db } from '@/lib/db';
-import { EXERCISE_CATEGORIES } from '@/lib/types';
+import { EQUIPMENT_OPTIONS, EXERCISE_CATEGORIES } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,8 +19,12 @@ export default async function AdminLibraryExercise({
   const exercise = await db.getLibraryExercise(libraryId);
   if (!exercise) notFound();
 
-  const sectionSuggestions = [
-    ...new Set([...EXERCISE_CATEGORIES, ...(await db.listLibrary()).map((e) => e.category)]),
+  const library = await db.listLibrary();
+  const sectionSuggestions = [...new Set([...EXERCISE_CATEGORIES, ...library.map((e) => e.category)])]
+    .filter(Boolean)
+    .sort();
+  const equipmentSuggestions = [
+    ...new Set([...EQUIPMENT_OPTIONS, ...library.map((e) => e.equipment ?? '')]),
   ]
     .filter(Boolean)
     .sort();
@@ -59,6 +63,32 @@ export default async function AdminLibraryExercise({
               ))}
             </datalist>
           </div>
+        </div>
+
+
+        <div className="mt-4">
+          <label htmlFor="equipment" className="label">
+            Equipment
+          </label>
+          {/* Free text with suggestions, same as the section — a machine at
+              their gym that isn't on the list is still fine to type. */}
+          <input
+            id="equipment"
+            name="equipment"
+            defaultValue={exercise.equipment ?? ''}
+            list="equipment-suggestions"
+            placeholder="e.g. Dumbbells"
+            className="field"
+          />
+          <datalist id="equipment-suggestions">
+            {equipmentSuggestions.map((item) => (
+              <option key={item} value={item} />
+            ))}
+          </datalist>
+          <p className="mt-2 text-sm text-muted">
+            Shown on the exercise, and gathered into a &ldquo;you&rsquo;ll need&rdquo; list at the
+            top of the workout. Leave it blank if there&rsquo;s nothing to fetch.
+          </p>
         </div>
 
         <div className="mt-5">

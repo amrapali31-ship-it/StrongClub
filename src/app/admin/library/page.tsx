@@ -107,6 +107,7 @@ export default async function AdminLibrary() {
                         <p className="font-bold">{exercise.name}</p>
                         <p className="text-sm text-muted">
                           {setsLabel(exercise)}
+                          {exercise.equipment && <> &middot; {exercise.equipment}</>}
                           {exercise.media_type === 'none' && (
                             <span className="ml-2 text-brand">no video</span>
                           )}

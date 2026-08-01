@@ -211,6 +211,7 @@ export async function saveImportedWeek(formData: FormData): Promise<void> {
       await db.createExercise({
         workout_id: workout.id,
         name: draftExercise.name || 'Untitled exercise',
+        equipment: draftExercise.equipment ?? '',
         instructions: draftExercise.instructions ?? '',
         mode,
         sets: Math.max(1, Math.round(draftExercise.sets || 1)),
@@ -368,6 +369,7 @@ export async function saveLibraryExercise(formData: FormData): Promise<void> {
   await db.updateLibraryExercise(id, {
     name: str(formData, 'name') || 'Untitled exercise',
     category: str(formData, 'category') || EXERCISE_CATEGORIES[0],
+    equipment: str(formData, 'equipment'),
     instructions: str(formData, 'instructions'),
     mode,
     sets: Math.max(1, Math.round(num(formData, 'sets', 1))),
@@ -404,6 +406,7 @@ export async function addExerciseFromLibrary(formData: FormData): Promise<void> 
     workout_id: workoutId,
     name: source.name,
     category: source.category,
+    equipment: source.equipment ?? '',
     instructions: source.instructions,
     mode: source.mode,
     sets: source.sets,
@@ -431,6 +434,7 @@ export async function saveExerciseToLibrary(formData: FormData): Promise<void> {
   const payload = {
     name: exercise.name,
     category: str(formData, 'category') || exercise.category || EXERCISE_CATEGORIES[0],
+    equipment: exercise.equipment ?? '',
     instructions: exercise.instructions,
     mode: exercise.mode,
     sets: exercise.sets,
@@ -481,6 +485,7 @@ export async function saveExercise(formData: FormData): Promise<void> {
   const exercise = await db.updateExercise(id, {
     name: str(formData, 'name') || 'Untitled exercise',
     category: str(formData, 'category'),
+    equipment: str(formData, 'equipment'),
     instructions: str(formData, 'instructions'),
     mode,
     sets: Math.max(1, Math.round(num(formData, 'sets', 1))),

@@ -50,6 +50,7 @@ const plan = [
     exercises: [
       {
         name: 'Sit to stand',
+        equipment: 'Chair',
         category: 'Legs',
         mode: 'reps',
         sets: 2,
@@ -62,6 +63,7 @@ const plan = [
       },
       {
         name: 'Heel raises',
+        equipment: 'Chair',
         category: 'Legs',
         mode: 'reps',
         sets: 2,
@@ -72,6 +74,7 @@ const plan = [
       },
       {
         name: 'Standing march',
+        equipment: 'Chair',
         category: 'Balance',
         mode: 'time',
         duration_seconds: 30,
@@ -82,6 +85,7 @@ const plan = [
       },
       {
         name: 'One-leg balance',
+        equipment: 'Chair',
         category: 'Balance',
         mode: 'time',
         duration_seconds: 20,
@@ -99,6 +103,7 @@ const plan = [
     exercises: [
       {
         name: 'Wall push-ups',
+        equipment: 'Wall',
         category: 'Upper body',
         mode: 'reps',
         sets: 2,
@@ -109,6 +114,7 @@ const plan = [
       },
       {
         name: 'Shoulder rolls',
+        equipment: 'Body weight',
         category: 'Mobility',
         mode: 'reps',
         sets: 1,
@@ -118,6 +124,7 @@ const plan = [
       },
       {
         name: 'Bicep curls',
+        equipment: 'Tins of beans or light dumbbells',
         category: 'Upper body',
         mode: 'reps',
         sets: 2,
@@ -128,6 +135,7 @@ const plan = [
       },
       {
         name: 'Overhead reach',
+        equipment: 'Body weight',
         category: 'Upper body',
         mode: 'reps',
         sets: 2,
@@ -145,6 +153,7 @@ const plan = [
     exercises: [
       {
         name: 'Neck turns',
+        equipment: 'Body weight',
         category: 'Mobility',
         mode: 'reps',
         sets: 1,
@@ -154,6 +163,7 @@ const plan = [
       },
       {
         name: 'Seated twist',
+        equipment: 'Chair',
         category: 'Core',
         mode: 'time',
         duration_seconds: 30,
@@ -164,6 +174,7 @@ const plan = [
       },
       {
         name: 'Ankle circles',
+        equipment: 'Chair',
         category: 'Mobility',
         mode: 'reps',
         sets: 2,
@@ -173,6 +184,7 @@ const plan = [
       },
       {
         name: 'Seated cat-cow',
+        equipment: 'Chair',
         category: 'Mobility',
         mode: 'reps',
         sets: 2,
@@ -190,6 +202,7 @@ const plan = [
     exercises: [
       {
         name: 'Warm-up walk',
+        equipment: 'Body weight',
         category: 'Cardio',
         mode: 'time',
         duration_seconds: 300,
@@ -199,6 +212,7 @@ const plan = [
       },
       {
         name: 'Brisk walk',
+        equipment: 'Body weight',
         category: 'Cardio',
         mode: 'time',
         duration_seconds: 600,
@@ -209,6 +223,7 @@ const plan = [
       },
       {
         name: 'Cool-down walk',
+        equipment: 'Body weight',
         category: 'Cardio',
         mode: 'time',
         duration_seconds: 300,
@@ -218,6 +233,7 @@ const plan = [
       },
       {
         name: 'Deep breathing',
+        equipment: 'Body weight',
         category: 'Cardio',
         mode: 'time',
         duration_seconds: 60,
@@ -251,6 +267,7 @@ plan.forEach((entry, workoutIndex) => {
       workout_id: workout.id,
       name: exercise.name,
       category: exercise.category ?? '',
+      equipment: exercise.equipment ?? '',
       instructions: exercise.instructions ?? '',
       mode: exercise.mode,
       sets: exercise.sets,

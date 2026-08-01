@@ -103,3 +103,6 @@ alter table exercise_completions enable row level security;
 insert into storage.buckets (id, name, public)
 values ('workout-media', 'workout-media', true)
 on conflict (id) do nothing;
+
+alter table exercises add column if not exists equipment text not null default '';
+alter table library_exercises add column if not exists equipment text not null default '';

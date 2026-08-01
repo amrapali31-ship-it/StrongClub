@@ -157,7 +157,10 @@ function ReviewDraft({ draft, onDiscard }: { draft: DraftWeek; onDiscard: () => 
               {workout.exercises.map((exercise, j) => (
                 <li key={j} className="border-t border-line pt-2 first:border-0 first:pt-0">
                   <p className="font-semibold">{exercise.name}</p>
-                  <p className="text-sm text-muted">{setsLabel(exercise)}</p>
+                  <p className="text-sm text-muted">
+                    {setsLabel(exercise)}
+                    {exercise.equipment && <> &middot; {exercise.equipment}</>}
+                  </p>
                   {exercise.instructions && (
                     <p className="mt-1 text-sm whitespace-pre-line text-muted">
                       {exercise.instructions}

@@ -274,6 +274,7 @@ function SortableExercise({
         <p className="font-bold">{exercise.name}</p>
         <p className="text-sm text-muted">
           {setsLabel(exercise)}
+          {exercise.equipment && <> &middot; {exercise.equipment}</>}
           {exercise.media_type === 'none' && (
             <span className="ml-2 whitespace-nowrap text-brand">no video</span>
           )}
