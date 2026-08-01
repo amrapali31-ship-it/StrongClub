@@ -3,8 +3,9 @@
 import { useRef, useState } from 'react';
 
 import { MediaFrame } from '@/components/MediaFrame';
-import { checkUpload, youTubeId } from '@/lib/media';
+import { youTubeId } from '@/lib/media';
 import type { MediaType } from '@/lib/types';
+import { uploadFile } from '@/lib/upload-client';
 
 type Source = 'none' | 'youtube' | 'upload';
 
@@ -38,50 +39,20 @@ export function MediaPicker({ name, defaultUrl, defaultType }: Props) {
   const effectiveType: MediaType =
     source === 'none' ? 'none' : source === 'youtube' ? 'youtube' : mediaType;
 
-  function upload(file: File) {
-    const problem = checkUpload(file);
-    if (problem) {
-      setError(problem);
-      return;
-    }
-
+  async function upload(file: File) {
     setUploading(true);
     setError(null);
     setProgress(0);
 
-    // XHR rather than fetch: a phone video can take a while over mobile data,
-    // and fetch can't report how far along an upload is.
-    const request = new XMLHttpRequest();
-    const body = new FormData();
-    body.append('file', file);
-
-    request.upload.addEventListener('progress', (event) => {
-      if (event.lengthComputable) setProgress(Math.round((event.loaded / event.total) * 100));
-    });
-
-    request.addEventListener('load', () => {
+    try {
+      const result = await uploadFile(file, setProgress);
+      setUrl(result.url);
+      setMediaType(result.mediaType);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed.');
+    } finally {
       setUploading(false);
-      try {
-        const data = JSON.parse(request.responseText) as {
-          url?: string;
-          mediaType?: MediaType;
-          error?: string;
-        };
-        if (request.status >= 400 || !data.url) throw new Error(data.error ?? 'Upload failed.');
-        setUrl(data.url);
-        setMediaType(data.mediaType ?? 'image');
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Upload failed.');
-      }
-    });
-
-    request.addEventListener('error', () => {
-      setUploading(false);
-      setError('Upload failed — check your connection and try again.');
-    });
-
-    request.open('POST', '/api/upload');
-    request.send(body);
+    }
   }
 
   function handleDrop(event: React.DragEvent) {
@@ -93,7 +64,7 @@ export function MediaPicker({ name, defaultUrl, defaultType }: Props) {
     if (!file) return;
 
     setSource('upload');
-    upload(file);
+    void upload(file);
   }
 
   const youTubeValid = source !== 'youtube' || !url.trim() || Boolean(youTubeId(url));

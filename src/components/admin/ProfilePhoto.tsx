@@ -2,8 +2,8 @@
 
 import { useRef, useState, useTransition } from 'react';
 
-import { checkUpload } from '@/lib/media';
 import type { Profile } from '@/lib/types';
+import { uploadFile } from '@/lib/upload-client';
 
 /**
  * Tap a person's avatar to give them a photo. Uploads through the same endpoint
@@ -33,23 +33,17 @@ export function ProfilePhoto({
 
   async function upload(file: File) {
     // Photos only here — a video makes no sense as an avatar.
-    const problem = checkUpload(file) ?? (file.type.startsWith('image/') ? null : 'Pick a photo.');
-    if (problem) {
-      setError(problem);
+    if (!file.type.startsWith('image/')) {
+      setError('Pick a photo.');
       return;
     }
 
     setBusy(true);
     setError(null);
     try {
-      const body = new FormData();
-      body.append('file', file);
-      const response = await fetch('/api/upload', { method: 'POST', body });
-      const data = (await response.json()) as { url?: string; error?: string };
-      if (!response.ok || !data.url) throw new Error(data.error ?? 'Upload failed.');
-
-      setPhoto(data.url);
-      persist(data.url);
+      const { url } = await uploadFile(file);
+      setPhoto(url);
+      persist(url);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed.');
     } finally {
