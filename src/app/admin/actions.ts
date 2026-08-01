@@ -7,7 +7,7 @@ import { checkPasscode, isAdmin, signInAdmin, signOutAdmin } from '@/lib/auth';
 import { db } from '@/lib/db';
 import type { DraftWeek } from '@/lib/importer';
 import { detectMediaType } from '@/lib/media';
-import { normaliseCategory } from '@/lib/ordering';
+import { closesWorkout, groupExercises, normaliseCategory, opensWorkout } from '@/lib/ordering';
 import { nextWeekSlot } from '@/lib/queries';
 import {
   EXERCISE_CATEGORIES,
@@ -494,7 +494,23 @@ export async function renameSection(formData: FormData): Promise<void> {
   }
 
   revalidatePath(`/admin/workout/${workoutId}`);
+  revalidatePath(`/workout/${workoutId}`);
   revalidatePath('/home');
+}
+
+/**
+ * Reads back the sections in the order they're currently displayed.
+ *
+ * Once anything is arranged by hand this list becomes the running order, so it
+ * has to be written out in full — pinning one section and leaving the rest
+ * implicit would let them drift apart. Uncategorised leftovers are left out:
+ * they have no name to store, and they always sit at the end anyway.
+ */
+async function currentSectionOrder(workoutId: string, sections: string[]): Promise<string[]> {
+  const exercises = await db.listExercises(workoutId);
+  return groupExercises(exercises, sections, { includeEmpty: true })
+    .map((group) => group.category)
+    .filter(Boolean);
 }
 
 /** Creates an empty section so exercises can be dragged or added into it. */
@@ -509,15 +525,46 @@ export async function addSection(formData: FormData): Promise<void> {
 
   // Matched loosely, so typing "warm up" next to an existing "Warm-up" doesn't
   // leave the workout with two headings that read the same.
-  const exercises = await db.listExercises(workoutId);
+  const order = await currentSectionOrder(workoutId, workout.sections ?? []);
   const key = normaliseCategory(name);
-  const alreadyThere =
-    (workout.sections ?? []).some((s) => normaliseCategory(s) === key) ||
-    exercises.some((e) => normaliseCategory(e.category ?? '') === key);
-  if (alreadyThere) return;
+  if (order.some((section) => normaliseCategory(section) === key)) return;
 
-  await db.updateWorkout(workoutId, { sections: [...(workout.sections ?? []), name] });
+  // Dropped in where it belongs rather than always at the end: a warm-up opens
+  // the workout and a cool-down closes it. Either way it can be moved after.
+  let at = order.length;
+  if (opensWorkout(name)) {
+    at = 0;
+  } else if (!closesWorkout(name)) {
+    const closing = order.findIndex((section) => closesWorkout(section));
+    if (closing !== -1) at = closing;
+  }
+  order.splice(at, 0, name);
+
+  await db.updateWorkout(workoutId, { sections: order });
   revalidatePath(`/admin/workout/${workoutId}`);
+  revalidatePath(`/workout/${workoutId}`);
+}
+
+/** Shifts a section one place up or down, exercises and all. */
+export async function moveSection(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const workoutId = str(formData, 'workoutId');
+  const name = str(formData, 'name');
+  const step = str(formData, 'direction') === 'up' ? -1 : 1;
+
+  const workout = await db.getWorkout(workoutId);
+  if (!workout || !name) return;
+
+  const order = await currentSectionOrder(workoutId, workout.sections ?? []);
+  const from = order.indexOf(name);
+  const to = from + step;
+  if (from === -1 || to < 0 || to >= order.length) return;
+
+  [order[from], order[to]] = [order[to], order[from]];
+
+  await db.updateWorkout(workoutId, { sections: order });
+  revalidatePath(`/admin/workout/${workoutId}`);
+  revalidatePath(`/workout/${workoutId}`);
 }
 
 /**
@@ -539,6 +586,7 @@ export async function removeSection(formData: FormData): Promise<void> {
     sections: (workout.sections ?? []).filter((s) => s !== name),
   });
   revalidatePath(`/admin/workout/${workoutId}`);
+  revalidatePath(`/workout/${workoutId}`);
 }
 
 /**

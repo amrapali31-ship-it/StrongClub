@@ -6,6 +6,7 @@ import {
   addExerciseFromLibrary,
   removeExercise,
   addSection,
+  moveSection,
   removeSection,
   removeWorkout,
   renameSection,
@@ -36,7 +37,7 @@ export default async function AdminWorkout({
   ]);
 
   const declaredSections = workout.sections ?? [];
-  const groups = groupExercises(exercises, declaredSections);
+  const groups = groupExercises(exercises, declaredSections, { includeEmpty: true });
   // A section the coach added by hand always earns its heading, even when it's
   // the only one — it's there precisely so there's somewhere to drag things.
   const showHeadings = shouldShowGroupHeadings(groups) || declaredSections.length > 0;
@@ -110,6 +111,7 @@ export default async function AdminWorkout({
               remove={removeExercise}
               rename={renameSection}
               removeSection={removeSection}
+              moveSection={moveSection}
             />
             {exercises.length > 0 && (
               <p className="mt-3 text-sm text-muted">

@@ -39,6 +39,9 @@ interface HeadingRow {
   category: string;
   heading: string;
   isEmpty: boolean;
+  /** Position among the headings, for greying out the end stops. */
+  index: number;
+  count: number;
 }
 
 interface ExerciseRow {
@@ -61,6 +64,7 @@ interface Props {
   remove: (formData: FormData) => Promise<void>;
   rename: (formData: FormData) => Promise<void>;
   removeSection: (formData: FormData) => Promise<void>;
+  moveSection: (formData: FormData) => Promise<void>;
 }
 
 function toRows(
@@ -68,6 +72,10 @@ function toRows(
   showHeadings: boolean,
 ): Row[] {
   const rows: Row[] = [];
+  // Only named sections can be moved, so the "Also" bucket doesn't count
+  // towards the end stops — otherwise the last real section looks stuck.
+  const movable = groups.filter((g) => g.category);
+
   for (const group of groups) {
     if (showHeadings) {
       rows.push({
@@ -76,6 +84,8 @@ function toRows(
         category: group.category,
         heading: group.heading,
         isEmpty: group.exercises.length === 0,
+        index: movable.indexOf(group),
+        count: movable.length,
       });
     }
     for (const exercise of group.exercises) {
@@ -94,6 +104,7 @@ export function ExerciseReorder({
   remove,
   rename,
   removeSection,
+  moveSection,
 }: Props) {
   const [rows, setRows] = useState<Row[]>(() => toRows(groups, showHeadings));
   const [, startTransition] = useTransition();
@@ -168,9 +179,12 @@ export function ExerciseReorder({
                   category={row.category}
                   heading={row.heading}
                   isEmpty={row.isEmpty}
+                  index={row.index}
+                  count={row.count}
                   suggestions={suggestions}
                   rename={rename}
                   removeSection={removeSection}
+                  moveSection={moveSection}
                 />
               </HeadingItem>
             ) : (
@@ -284,17 +298,24 @@ function SectionHeading({
   category,
   heading,
   isEmpty,
+  index,
+  count,
   suggestions,
   rename,
   removeSection,
+  moveSection,
 }: {
   workoutId: string;
   category: string;
   heading: string;
   isEmpty: boolean;
+  /** Position among the movable sections, and how many there are. */
+  index: number;
+  count: number;
   suggestions: string[];
   rename: (formData: FormData) => Promise<void>;
   removeSection: (formData: FormData) => Promise<void>;
+  moveSection: (formData: FormData) => Promise<void>;
 }) {
   const [editing, setEditing] = useState(false);
 
@@ -314,6 +335,28 @@ function SectionHeading({
             rename
           </span>
         </button>
+
+        {/* Whole sections move a step at a time rather than by dragging: a
+            section can be taller than the screen, and tapping an arrow beats
+            dragging a ten-row block past its neighbours on a phone. */}
+        {category && count > 1 && (
+          <span className="flex items-center">
+            <MoveSectionButton
+              workoutId={workoutId}
+              category={category}
+              direction="up"
+              disabled={index === 0}
+              moveSection={moveSection}
+            />
+            <MoveSectionButton
+              workoutId={workoutId}
+              category={category}
+              direction="down"
+              disabled={index === count - 1}
+              moveSection={moveSection}
+            />
+          </span>
+        )}
 
         {/* Only empty sections can be removed, so this can't orphan anything. */}
         {isEmpty && category && (
@@ -363,6 +406,36 @@ function SectionHeading({
         className="shrink-0 px-1 text-sm font-semibold text-muted hover:text-ink"
       >
         Cancel
+      </button>
+    </form>
+  );
+}
+
+function MoveSectionButton({
+  workoutId,
+  category,
+  direction,
+  disabled,
+  moveSection,
+}: {
+  workoutId: string;
+  category: string;
+  direction: 'up' | 'down';
+  disabled: boolean;
+  moveSection: (formData: FormData) => Promise<void>;
+}) {
+  return (
+    <form action={moveSection}>
+      <input type="hidden" name="workoutId" value={workoutId} />
+      <input type="hidden" name="name" value={category} />
+      <input type="hidden" name="direction" value={direction} />
+      <button
+        type="submit"
+        disabled={disabled}
+        aria-label={`Move ${category} ${direction}`}
+        className="flex h-9 w-7 items-center justify-center text-base text-muted transition hover:text-ink disabled:opacity-25 disabled:hover:text-muted"
+      >
+        {direction === 'up' ? '↑' : '↓'}
       </button>
     </form>
   );

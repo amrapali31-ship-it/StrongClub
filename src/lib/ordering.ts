@@ -96,21 +96,23 @@ export interface ExerciseGroup {
 }
 
 /**
- * Splits a workout into its sub-sections — Legs, Core, and so on — using the
- * category each exercise inherited from the library.
+ * Splits a workout into its sub-sections — Legs, Core, and so on.
  *
- * Groups appear in the order they first show up in the workout, so the coach's
- * own sequencing decides whether legs or core comes first. Uncategorised
- * one-offs collect at the end.
+ * `sections` is the coach's own running order, and it wins whenever it's set:
+ * it's the only thing that can place a section with nothing in it, and it's
+ * what lets a section be moved without shuffling the exercises inside it. A
+ * workout that has never had its sections arranged has an empty list, and then
+ * groups fall back to the order they first appear in — with a warm-up pulled
+ * to the front and a cool-down pushed to the back.
  */
 export function groupExercises(
   exercises: Exercise[],
+  sections: string[] = [],
   /**
-   * Sections to show even when empty. The admin passes the workout's own list
-   * so a freshly created section is visible and can be dragged into; parents
-   * don't, so they never see an empty heading.
+   * Sections with nothing in them. The admin shows them, because they're there
+   * to be filled; parents never see a heading with no exercises under it.
    */
-  declaredSections: string[] = [],
+  { includeEmpty = false }: { includeEmpty?: boolean } = {},
 ): ExerciseGroup[] {
   const groups: ExerciseGroup[] = [];
 
@@ -121,23 +123,37 @@ export function groupExercises(
     else groups.push({ category, heading: category || 'Also', exercises: [exercise] });
   }
 
-  for (const section of declaredSections) {
-    if (!groups.some((g) => g.category === section)) {
-      groups.push({ category: section, heading: section || 'Also', exercises: [] });
+  if (includeEmpty) {
+    for (const section of sections) {
+      if (!groups.some((g) => g.category === section)) {
+        groups.push({ category: section, heading: section || 'Also', exercises: [] });
+      }
     }
   }
 
-  // A warm-up opens and a cool-down closes, however they've been spelled;
-  // uncategorised sits just before the cool-down. Everything else keeps the
-  // order the coach arranged.
-  const rank = (g: ExerciseGroup) => {
-    if (opensWorkout(g.category)) return 0;
-    if (closesWorkout(g.category)) return 3;
-    return g.category ? 1 : 2;
+  // Sorted on a tuple: which band the group belongs to, then its place within
+  // that band. Anything the coach has arranged sits in the middle band in the
+  // order they put it in; a section they've never arranged keeps the old
+  // behaviour, so adding one to an untouched workout still lands sensibly.
+  const key = (g: ExerciseGroup, appearance: number): [number, number, number] => {
+    const arranged = sections.indexOf(g.category);
+    if (arranged !== -1) return [1, arranged, 0];
+    if (opensWorkout(g.category)) return [0, 0, appearance];
+    if (closesWorkout(g.category)) return [2, 0, appearance];
+
+    // Uncategorised leftovers sit after everything arranged, but still ahead
+    // of a cool-down — stretches belong at the end of a workout even when
+    // there are odds and ends that never got a section.
+    if (!g.category) {
+      const closing = sections.findIndex((section) => closesWorkout(section));
+      return [1, closing === -1 ? sections.length + 1 : closing - 0.5, appearance];
+    }
+
+    return [1, sections.length, appearance];
   };
 
   return groups
-    .map((group, index) => ({ group, index }))
-    .sort((a, b) => rank(a.group) - rank(b.group) || a.index - b.index)
+    .map((group, index) => ({ group, key: key(group, index) }))
+    .sort((a, b) => a.key[0] - b.key[0] || a.key[1] - b.key[1] || a.key[2] - b.key[2])
     .map(({ group }) => group);
 }

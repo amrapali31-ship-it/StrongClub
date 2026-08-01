@@ -30,7 +30,12 @@ export default async function WorkoutOverview({
   const week = await db.getWeek(workout.week_id);
   const doneCount = exercises.filter((e) => doneExerciseIds.has(e.id)).length;
 
-  const groups = groupExercises(exercises);
+  // The coach's section order is passed through so parents see the workout
+  // laid out the way it was arranged; empty sections stay behind in the admin.
+  const groups = groupExercises(exercises, workout.sections ?? []);
+  // Numbered by where things actually appear, not by stored position — moving a
+  // section around shouldn't leave the list counting 3, 4, 1, 2.
+  const running = groups.flatMap((group) => group.exercises);
   const showHeadings = shouldShowGroupHeadings(groups);
 
   return (
@@ -86,7 +91,7 @@ export default async function WorkoutOverview({
             <ol className="flex flex-col gap-4">
               {group.exercises.map((exercise) => {
                 const done = doneExerciseIds.has(exercise.id);
-                const i = exercises.indexOf(exercise);
+                const i = running.indexOf(exercise);
 
                 return (
                   <li key={exercise.id} className={`card p-4 ${done ? 'bg-success-tint/40' : ''}`}>
