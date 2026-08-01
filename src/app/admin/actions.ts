@@ -7,6 +7,7 @@ import { checkPasscode, isAdmin, signInAdmin, signOutAdmin } from '@/lib/auth';
 import { db } from '@/lib/db';
 import type { DraftWeek } from '@/lib/importer';
 import { detectMediaType } from '@/lib/media';
+import { normaliseCategory } from '@/lib/ordering';
 import { nextWeekSlot } from '@/lib/queries';
 import {
   EXERCISE_CATEGORIES,
@@ -110,6 +111,7 @@ export async function repeatLastWeek(): Promise<void> {
       title: workout.title,
       emoji: workout.emoji,
       subtitle: workout.subtitle,
+      sections: workout.sections ?? [],
       position: workout.position,
     });
     for (const exercise of await db.listExercises(workout.id)) {
@@ -163,6 +165,7 @@ export async function duplicateWeek(formData: FormData): Promise<void> {
       title: workout.title,
       emoji: workout.emoji,
       subtitle: workout.subtitle,
+      sections: workout.sections ?? [],
       position: workout.position,
     });
 
@@ -482,8 +485,60 @@ export async function renameSection(formData: FormData): Promise<void> {
       .map((e) => db.updateExercise(e.id, { category: to })),
   );
 
+  // Keep the workout's own list in step, or a renamed empty section would
+  // vanish and the old name would linger.
+  const workout = await db.getWorkout(workoutId);
+  if (workout?.sections?.includes(from)) {
+    const next = workout.sections.map((s) => (s === from ? to : s));
+    await db.updateWorkout(workoutId, { sections: [...new Set(next.filter(Boolean))] });
+  }
+
   revalidatePath(`/admin/workout/${workoutId}`);
   revalidatePath('/home');
+}
+
+/** Creates an empty section so exercises can be dragged or added into it. */
+export async function addSection(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const workoutId = str(formData, 'workoutId');
+  const name = str(formData, 'name');
+  if (!name) return;
+
+  const workout = await db.getWorkout(workoutId);
+  if (!workout) return;
+
+  // Matched loosely, so typing "warm up" next to an existing "Warm-up" doesn't
+  // leave the workout with two headings that read the same.
+  const exercises = await db.listExercises(workoutId);
+  const key = normaliseCategory(name);
+  const alreadyThere =
+    (workout.sections ?? []).some((s) => normaliseCategory(s) === key) ||
+    exercises.some((e) => normaliseCategory(e.category ?? '') === key);
+  if (alreadyThere) return;
+
+  await db.updateWorkout(workoutId, { sections: [...(workout.sections ?? []), name] });
+  revalidatePath(`/admin/workout/${workoutId}`);
+}
+
+/**
+ * Drops an empty section. Only ever offered when nothing is in it, so this
+ * can't quietly orphan exercises.
+ */
+export async function removeSection(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const workoutId = str(formData, 'workoutId');
+  const name = str(formData, 'name');
+
+  const workout = await db.getWorkout(workoutId);
+  if (!workout) return;
+
+  const exercises = await db.listExercises(workoutId);
+  if (exercises.some((e) => (e.category ?? '') === name)) return;
+
+  await db.updateWorkout(workoutId, {
+    sections: (workout.sections ?? []).filter((s) => s !== name),
+  });
+  revalidatePath(`/admin/workout/${workoutId}`);
 }
 
 /**

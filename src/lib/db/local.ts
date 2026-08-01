@@ -189,6 +189,7 @@ export const localDb: Database = {
         week_id: data.week_id,
         title: data.title,
         emoji: data.emoji ?? '',
+        sections: data.sections ?? [],
         subtitle: data.subtitle ?? '',
         position: data.position ?? nextPosition(siblings),
         created_at: new Date().toISOString(),

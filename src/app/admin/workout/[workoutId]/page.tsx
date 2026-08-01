@@ -5,6 +5,8 @@ import {
   addExercise,
   addExerciseFromLibrary,
   removeExercise,
+  addSection,
+  removeSection,
   removeWorkout,
   renameSection,
   reorderExercises,
@@ -33,8 +35,11 @@ export default async function AdminWorkout({
     db.listLibrary(),
   ]);
 
-  const groups = groupExercises(exercises);
-  const showHeadings = shouldShowGroupHeadings(groups);
+  const declaredSections = workout.sections ?? [];
+  const groups = groupExercises(exercises, declaredSections);
+  // A section the coach added by hand always earns its heading, even when it's
+  // the only one — it's there precisely so there's somewhere to drag things.
+  const showHeadings = shouldShowGroupHeadings(groups) || declaredSections.length > 0;
 
   // Offer whatever's already in use anywhere, plus the built-in suggestions.
   const sectionSuggestions = [
@@ -93,7 +98,7 @@ export default async function AdminWorkout({
       <section className="mt-8">
         <h2 className="text-xl font-extrabold tracking-tight">Exercises</h2>
 
-        {exercises.length > 0 ? (
+        {groups.length > 0 ? (
           <>
             <ExerciseReorder
               workoutId={workout.id}
@@ -104,15 +109,42 @@ export default async function AdminWorkout({
               reorder={reorderExercises}
               remove={removeExercise}
               rename={renameSection}
+              removeSection={removeSection}
             />
-            <p className="mt-3 text-sm text-muted">
-              Drag the <span className="font-mono text-ink">⠿</span> handle to reorder.
-              {showHeadings && ' Drop an exercise under a different heading to move it there.'}
-            </p>
+            {exercises.length > 0 && (
+              <p className="mt-3 text-sm text-muted">
+                Drag the <span className="font-mono text-ink">⠿</span> handle to reorder.
+                {showHeadings && ' Drop an exercise under a different heading to move it there.'}
+              </p>
+            )}
           </>
         ) : (
           <p className="card mt-4 p-4 text-muted">No exercises yet.</p>
         )}
+
+        <form action={addSection} className="card mt-4 flex items-end gap-3 p-4">
+          <input type="hidden" name="workoutId" value={workout.id} />
+          <div className="min-w-0 flex-1">
+            <label htmlFor="section-name" className="label">
+              Add a section
+            </label>
+            <input
+              id="section-name"
+              name="name"
+              placeholder="e.g. Finisher"
+              list="section-suggestions"
+              className="field"
+            />
+            <datalist id="section-suggestions">
+              {sectionSuggestions.map((category) => (
+                <option key={category} value={category} />
+              ))}
+            </datalist>
+          </div>
+          <button type="submit" className="btn-secondary shrink-0 text-base">
+            Add
+          </button>
+        </form>
 
         {library.length > 0 && (
           <form action={addExerciseFromLibrary} className="card mt-4 flex items-end gap-3 p-4">

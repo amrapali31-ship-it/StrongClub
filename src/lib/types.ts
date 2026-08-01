@@ -27,6 +27,12 @@ export interface Workout {
   title: string;
   /** One or two characters shown beside the title. Empty for none. */
   emoji: string;
+  /**
+   * Sections the coach created explicitly, so one can exist before anything is
+   * in it. Sections also arise implicitly from an exercise's category — this
+   * list is only what would otherwise be invisible.
+   */
+  sections: string[];
   subtitle: string;
   position: number;
   created_at: string;

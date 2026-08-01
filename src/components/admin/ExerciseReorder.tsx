@@ -6,6 +6,7 @@ import {
   MouseSensor,
   TouchSensor,
   closestCenter,
+  useDroppable,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -24,7 +25,7 @@ import { useState, useTransition } from 'react';
 import { DeleteExerciseButton } from '@/components/admin/DeleteExerciseButton';
 import { MediaThumb } from '@/components/MediaFrame';
 import { setsLabel } from '@/lib/media';
-import { readOrderFromRows } from '@/lib/ordering';
+import { placeRow, readOrderFromRows } from '@/lib/ordering';
 import type { Exercise } from '@/lib/types';
 
 /**
@@ -37,6 +38,7 @@ interface HeadingRow {
   id: string;
   category: string;
   heading: string;
+  isEmpty: boolean;
 }
 
 interface ExerciseRow {
@@ -58,6 +60,7 @@ interface Props {
   reorder: (formData: FormData) => Promise<void>;
   remove: (formData: FormData) => Promise<void>;
   rename: (formData: FormData) => Promise<void>;
+  removeSection: (formData: FormData) => Promise<void>;
 }
 
 function toRows(
@@ -72,6 +75,7 @@ function toRows(
         id: `heading:${group.category}`,
         category: group.category,
         heading: group.heading,
+        isEmpty: group.exercises.length === 0,
       });
     }
     for (const exercise of group.exercises) {
@@ -89,6 +93,7 @@ export function ExerciseReorder({
   reorder,
   remove,
   rename,
+  removeSection,
 }: Props) {
   const [rows, setRows] = useState<Row[]>(() => toRows(groups, showHeadings));
   const [, startTransition] = useTransition();
@@ -118,13 +123,8 @@ export function ExerciseReorder({
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    const from = rows.findIndex((r) => r.id === active.id);
-    const to = rows.findIndex((r) => r.id === over.id);
-    if (from === -1 || to === -1) return;
-
-    const next = [...rows];
-    const [moved] = next.splice(from, 1);
-    next.splice(to, 0, moved);
+    const next = placeRow(rows, String(active.id), String(over.id));
+    if (next === rows) return;
 
     setRows(next);
 
@@ -162,15 +162,17 @@ export function ExerciseReorder({
         <ul className="relative mt-4 flex flex-col gap-2">
           {rows.map((row) =>
             row.kind === 'heading' ? (
-              <li key={row.id} className="mt-4 mb-1 first:mt-0">
+              <HeadingItem key={row.id} id={row.id} isEmpty={row.isEmpty}>
                 <SectionHeading
                   workoutId={workoutId}
                   category={row.category}
                   heading={row.heading}
+                  isEmpty={row.isEmpty}
                   suggestions={suggestions}
                   rename={rename}
+                  removeSection={removeSection}
                 />
-              </li>
+              </HeadingItem>
             ) : (
               <SortableExercise
                 key={row.id}
@@ -182,6 +184,38 @@ export function ExerciseReorder({
         </ul>
       </SortableContext>
     </DndContext>
+  );
+}
+
+/**
+ * A heading row that exercises can be dropped onto. Sortable items can't be
+ * dropped onto a plain heading, so an empty section would be unreachable
+ * without registering the heading as a drop target in its own right.
+ */
+function HeadingItem({
+  id,
+  isEmpty,
+  children,
+}: {
+  id: string;
+  isEmpty: boolean;
+  children: React.ReactNode;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+
+  return (
+    <li ref={setNodeRef} className="mt-4 mb-1 first:mt-0">
+      {children}
+      {isEmpty && (
+        <p
+          className={`mt-2 rounded-xl2 border-2 border-dashed p-4 text-center text-sm transition ${
+            isOver ? 'border-brand text-ink' : 'border-line text-muted'
+          }`}
+        >
+          Drag an exercise here, or add one below.
+        </p>
+      )}
+    </li>
   );
 }
 
@@ -249,32 +283,52 @@ function SectionHeading({
   workoutId,
   category,
   heading,
+  isEmpty,
   suggestions,
   rename,
+  removeSection,
 }: {
   workoutId: string;
   category: string;
   heading: string;
+  isEmpty: boolean;
   suggestions: string[];
   rename: (formData: FormData) => Promise<void>;
+  removeSection: (formData: FormData) => Promise<void>;
 }) {
   const [editing, setEditing] = useState(false);
 
   if (!editing) {
     return (
-      <button
-        type="button"
-        onClick={() => setEditing(true)}
-        className="group flex items-center gap-2 text-sm font-bold tracking-widest text-brand uppercase"
-      >
-        {heading}
-        <span
-          aria-hidden
-          className="text-xs tracking-normal text-muted normal-case opacity-0 transition group-hover:opacity-100"
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="group flex items-center gap-2 text-sm font-bold tracking-widest text-brand uppercase"
         >
-          rename
-        </span>
-      </button>
+          {heading}
+          <span
+            aria-hidden
+            className="text-xs tracking-normal text-muted normal-case opacity-0 transition group-hover:opacity-100"
+          >
+            rename
+          </span>
+        </button>
+
+        {/* Only empty sections can be removed, so this can't orphan anything. */}
+        {isEmpty && category && (
+          <form action={removeSection}>
+            <input type="hidden" name="workoutId" value={workoutId} />
+            <input type="hidden" name="name" value={category} />
+            <button
+              type="submit"
+              className="px-1 text-xs font-semibold text-muted normal-case hover:text-brand"
+            >
+              remove
+            </button>
+          </form>
+        )}
+      </div>
     );
   }
 

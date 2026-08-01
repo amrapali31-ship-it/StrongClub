@@ -1,5 +1,9 @@
 import { db } from '@/lib/db';
-import { closesWorkout, opensWorkout } from '@/lib/ordering';
+import { groupExercises, type ExerciseGroup } from '@/lib/ordering';
+
+// Re-exported so callers keep importing grouping from one place.
+export { groupExercises };
+export type { ExerciseGroup };
 import type { Exercise, Week, Workout } from '@/lib/types';
 
 export interface WorkoutProgress {
@@ -17,47 +21,6 @@ export interface WorkoutProgress {
 export async function getCurrentWeek(): Promise<Week | null> {
   const weeks = await db.listWeeks({ publishedOnly: true });
   return weeks[0] ?? null;
-}
-
-export interface ExerciseGroup {
-  /** Empty string for exercises with no category. */
-  category: string;
-  /** What to print above the group. */
-  heading: string;
-  exercises: Exercise[];
-}
-
-/**
- * Splits a workout into its sub-sections — Legs, Core, and so on — using the
- * category each exercise inherited from the library.
- *
- * Groups appear in the order they first show up in the workout, so the coach's
- * own sequencing decides whether legs or core comes first. Uncategorised
- * one-offs collect at the end.
- */
-export function groupExercises(exercises: Exercise[]): ExerciseGroup[] {
-  const groups: ExerciseGroup[] = [];
-
-  for (const exercise of exercises) {
-    const category = exercise.category ?? '';
-    const existing = groups.find((g) => g.category === category);
-    if (existing) existing.exercises.push(exercise);
-    else groups.push({ category, heading: category || 'Also', exercises: [exercise] });
-  }
-
-  // A warm-up opens and a cool-down closes, however they've been spelled;
-  // uncategorised sits just before the cool-down. Everything else keeps the
-  // order the coach arranged.
-  const rank = (g: ExerciseGroup) => {
-    if (opensWorkout(g.category)) return 0;
-    if (closesWorkout(g.category)) return 3;
-    return g.category ? 1 : 2;
-  };
-
-  return groups
-    .map((group, index) => ({ group, index }))
-    .sort((a, b) => rank(a.group) - rank(b.group) || a.index - b.index)
-    .map(({ group }) => group);
 }
 
 /**

@@ -71,6 +71,8 @@ alter table exercises add column if not exists category text not null default ''
 -- Safe to re-run; both do nothing if the column already exists.
 alter table profiles add column if not exists photo_url text not null default '';
 alter table workouts add column if not exists emoji text not null default '';
+-- Sections the coach created before putting anything in them.
+alter table workouts add column if not exists sections jsonb not null default '[]'::jsonb;
 
 create table if not exists exercise_completions (
   id uuid primary key default gen_random_uuid(),
