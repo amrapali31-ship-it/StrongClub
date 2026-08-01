@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import {
   addWorkout,
   duplicateWeek,
+  duplicateWorkout,
   moveWorkout,
   removeWeek,
   saveWeek,
@@ -111,6 +112,16 @@ export default async function AdminWeek({ params }: { params: Promise<{ weekId: 
                   {count} {count === 1 ? 'exercise' : 'exercises'} &middot; about {minutes} min
                 </p>
               </Link>
+
+              <form action={duplicateWorkout} className="shrink-0">
+                <input type="hidden" name="workoutId" value={workout.id} />
+                <button
+                  type="submit"
+                  className="px-2 text-sm font-semibold text-muted hover:text-ink"
+                >
+                  Copy
+                </button>
+              </form>
 
               <Link
                 href={`/admin/workout/${workout.id}`}

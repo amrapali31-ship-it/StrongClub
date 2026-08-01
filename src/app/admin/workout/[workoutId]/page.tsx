@@ -6,6 +6,7 @@ import {
   addExerciseFromLibrary,
   removeExercise,
   addSection,
+  duplicateWorkout,
   moveSection,
   removeSection,
   removeWorkout,
@@ -210,12 +211,21 @@ export default async function AdminWorkout({
         )}
       </section>
 
-      <form action={removeWorkout} className="mt-10 border-t border-line pt-6">
-        <input type="hidden" name="workoutId" value={workout.id} />
-        <button type="submit" className="btn-ghost text-base hover:text-brand">
-          Delete workout
-        </button>
-      </form>
+      <section className="mt-10 flex flex-col gap-3 border-t border-line pt-6 sm:flex-row">
+        <form action={duplicateWorkout}>
+          <input type="hidden" name="workoutId" value={workout.id} />
+          <button type="submit" className="btn-secondary text-base">
+            Duplicate this workout
+          </button>
+        </form>
+
+        <form action={removeWorkout} className="sm:ml-auto">
+          <input type="hidden" name="workoutId" value={workout.id} />
+          <button type="submit" className="btn-ghost text-base hover:text-brand">
+            Delete workout
+          </button>
+        </form>
+      </section>
     </>
   );
 }

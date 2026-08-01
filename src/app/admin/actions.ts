@@ -273,6 +273,51 @@ export async function removeWorkout(formData: FormData): Promise<void> {
   redirect('/admin');
 }
 
+/**
+ * "Legs & balance" becomes "Legs & balance (copy)", and copying that again
+ * gives "(copy 2)" rather than stacking "(copy) (copy)" forever.
+ */
+function copyTitle(title: string): string {
+  const match = title.match(/^(.*) \(copy(?: (\d+))?\)$/);
+  if (!match) return `${title} (copy)`;
+  return `${match[1]} (copy ${Number(match[2] ?? 1) + 1})`;
+}
+
+/**
+ * Copies a workout in place — exercises, videos, sections and all — and drops
+ * it in directly after the original so it's easy to see what came from what.
+ */
+export async function duplicateWorkout(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = str(formData, 'workoutId');
+
+  const source = await db.getWorkout(id);
+  if (!source) return;
+
+  const copy = await db.createWorkout({
+    week_id: source.week_id,
+    title: copyTitle(source.title),
+    emoji: source.emoji,
+    subtitle: source.subtitle,
+    sections: source.sections ?? [],
+    position: source.position,
+  });
+
+  for (const exercise of await db.listExercises(id)) {
+    await db.createExercise({ ...exercise, workout_id: copy.id });
+  }
+
+  // Positions are only ever compared, never assumed contiguous, so the whole
+  // week is renumbered from the order we want rather than nudged around it.
+  const ordered = (await db.listWorkouts(source.week_id)).filter((w) => w.id !== copy.id);
+  ordered.splice(ordered.findIndex((w) => w.id === id) + 1, 0, copy);
+  await Promise.all(ordered.map((w, i) => db.updateWorkout(w.id, { position: i })));
+
+  revalidatePath(`/admin/week/${source.week_id}`);
+  revalidatePath('/home');
+  redirect(`/admin/workout/${copy.id}`);
+}
+
 export async function moveWorkout(formData: FormData): Promise<void> {
   await requireAdmin();
   const id = str(formData, 'workoutId');
