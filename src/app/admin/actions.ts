@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 
 import { checkPasscode, isAdmin, signInAdmin, signOutAdmin } from '@/lib/auth';
 import { db } from '@/lib/db';
-import type { DraftWeek, DraftWorkout } from '@/lib/importer';
+import type { DraftExercise, DraftWeek, DraftWorkout } from '@/lib/importer';
 import { detectMediaType } from '@/lib/media';
 import { closesWorkout, groupExercises, normaliseCategory, opensWorkout } from '@/lib/ordering';
 import { nextWeekSlot } from '@/lib/queries';
@@ -206,30 +206,50 @@ export async function saveImportedWeek(formData: FormData): Promise<void> {
       position: workoutIndex,
     });
 
-    for (const [exerciseIndex, draftExercise] of draftWorkout.exercises.entries()) {
-      const mode: ExerciseMode = draftExercise.mode === 'time' ? 'time' : 'reps';
-      await db.createExercise({
-        workout_id: workout.id,
-        name: draftExercise.name || 'Untitled exercise',
-        category: draftExercise.category ?? '',
-        equipment: draftExercise.equipment ?? '',
-        instructions: draftExercise.instructions ?? '',
-        mode,
-        sets: Math.max(1, Math.round(draftExercise.sets || 1)),
-        reps: mode === 'reps' ? Math.max(1, Math.round(draftExercise.reps ?? 10)) : null,
-        duration_seconds:
-          mode === 'time' ? Math.max(1, Math.round(draftExercise.duration_seconds ?? 30)) : null,
-        rest_seconds: Math.max(0, Math.round(draftExercise.rest_seconds ?? 30)),
-        // Media is never imported — models invent plausible-looking video links.
-        media_type: 'none',
-        media_url: '',
-        position: exerciseIndex,
-      });
+    for (const [index, draftExercise] of draftWorkout.exercises.entries()) {
+      await exerciseFromDraft(draftExercise, workout.id, index);
     }
   }
 
   revalidatePath('/admin');
   redirect(`/admin/week/${week.id}`);
+}
+
+/**
+ * Builds the exercise a draft describes, preferring the library entry it was
+ * matched to.
+ *
+ * The split matters: the *movement* comes from the library — its name, the
+ * coach's own wording, and above all its video, which is the one thing an
+ * import can never produce. The *numbers* come from the plan being imported,
+ * because today's session says three sets of eight whatever the library
+ * happens to store as a default.
+ */
+async function exerciseFromDraft(
+  draft: DraftExercise,
+  workoutId: string,
+  position: number,
+): Promise<void> {
+  const mode: ExerciseMode = draft.mode === 'time' ? 'time' : 'reps';
+  const source = draft.library_id ? await db.getLibraryExercise(draft.library_id) : null;
+
+  await db.createExercise({
+    workout_id: workoutId,
+    name: source?.name || draft.name || 'Untitled exercise',
+    category: source?.category || draft.category || '',
+    equipment: source?.equipment || draft.equipment || '',
+    instructions: source?.instructions || draft.instructions || '',
+    mode,
+    sets: Math.max(1, Math.round(draft.sets || 1)),
+    reps: mode === 'reps' ? Math.max(1, Math.round(draft.reps ?? 10)) : null,
+    duration_seconds: mode === 'time' ? Math.max(1, Math.round(draft.duration_seconds ?? 30)) : null,
+    rest_seconds: Math.max(0, Math.round(draft.rest_seconds ?? 30)),
+    // A matched entry brings its video. Otherwise nothing: models invent
+    // plausible-looking links that go nowhere.
+    media_type: source?.media_type ?? 'none',
+    media_url: source?.media_url ?? '',
+    position,
+  });
 }
 
 /**
@@ -264,24 +284,7 @@ export async function saveImportedWorkout(formData: FormData): Promise<void> {
   });
 
   for (const [index, draftExercise] of draft.exercises.entries()) {
-    const mode: ExerciseMode = draftExercise.mode === 'time' ? 'time' : 'reps';
-    await db.createExercise({
-      workout_id: workout.id,
-      name: draftExercise.name || 'Untitled exercise',
-      category: draftExercise.category ?? '',
-      equipment: draftExercise.equipment ?? '',
-      instructions: draftExercise.instructions ?? '',
-      mode,
-      sets: Math.max(1, Math.round(draftExercise.sets || 1)),
-      reps: mode === 'reps' ? Math.max(1, Math.round(draftExercise.reps ?? 10)) : null,
-      duration_seconds:
-        mode === 'time' ? Math.max(1, Math.round(draftExercise.duration_seconds ?? 30)) : null,
-      rest_seconds: Math.max(0, Math.round(draftExercise.rest_seconds ?? 30)),
-      // Media is never imported — models invent plausible-looking video links.
-      media_type: 'none',
-      media_url: '',
-      position: index,
-    });
+    await exerciseFromDraft(draftExercise, workout.id, index);
   }
 
   revalidatePath(`/admin/week/${weekId}`);

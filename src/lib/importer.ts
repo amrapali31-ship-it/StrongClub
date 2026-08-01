@@ -4,6 +4,14 @@ import type { ExerciseMode } from '@/lib/types';
 
 export interface DraftExercise {
   name: string;
+  /**
+   * The library entry this is the same movement as, chosen by name from what's
+   * actually in the library. Empty when nothing there fits.
+   */
+  library_match: string;
+  /** Resolved from `library_match` before the draft ever reaches the browser. */
+  library_id?: string;
+  library_name?: string;
   /** Section heading, e.g. "Warm-up" or "Legs". Empty when the source has none. */
   category: string;
   equipment: string;
@@ -34,100 +42,144 @@ export const MAX_IMPORT_IMAGE_BYTES = 5 * 1024 * 1024;
 
 const nullableInteger = { anyOf: [{ type: 'integer' }, { type: 'null' }] };
 
-const EXERCISE_SCHEMA = {
-  type: 'object',
-  properties: {
-    name: { type: 'string' },
-    category: {
-      type: 'string',
-      description:
-        "The part of the session this belongs to — 'Warm-up', 'Legs', 'Upper body', 'Core', 'Balance', 'Mobility', 'Cardio', 'Cool-down'. Use the source's own grouping when it has one. Empty string if the source gives no grouping at all.",
-    },
-    equipment: {
-      type: 'string',
-      description:
-        "What the exercise needs — 'Dumbbells', 'Chair', 'Resistance band', 'Cable machine'. Use 'Body weight' when nothing is needed. Empty string only if the source is genuinely unclear.",
-    },
-    instructions: {
-      type: 'string',
-      description:
-        'How to perform the exercise, in plain language. Empty string if the source gives none — do not invent technique cues.',
-    },
-    mode: {
-      type: 'string',
-      enum: ['reps', 'time'],
-      description: "'reps' for counted repetitions, 'time' for a hold or duration.",
-    },
-    sets: { type: 'integer', description: 'Number of sets. Use 1 if unspecified.' },
-    reps: { ...nullableInteger, description: "Reps per set. Null when mode is 'time'." },
-    duration_seconds: {
-      ...nullableInteger,
-      description: "Seconds to hold or perform. Null when mode is 'reps'.",
-    },
-    rest_seconds: {
-      type: 'integer',
-      description: 'Rest after each set. Use 30 if unspecified.',
-    },
-  },
-  required: [
-    'name',
-    'category',
-    'equipment',
-    'instructions',
-    'mode',
-    'sets',
-    'reps',
-    'duration_seconds',
-    'rest_seconds',
-  ],
-  additionalProperties: false,
-} as const;
-
-const WORKOUT_PROPERTIES = {
-  title: { type: 'string' },
-  subtitle: {
-    type: 'string',
-    description: 'Short description of the workout. Empty string if none is implied.',
-  },
-  exercises: { type: 'array', items: EXERCISE_SCHEMA },
-} as const;
-
-/** One workout on its own, for importing into a week that already exists. */
-const WORKOUT_SCHEMA = {
-  type: 'object',
-  properties: WORKOUT_PROPERTIES,
-  required: ['title', 'subtitle', 'exercises'],
-  additionalProperties: false,
-} as const;
+export interface LibraryChoice {
+  id: string;
+  name: string;
+}
 
 /**
- * Structured-output schema. Every field is required and `additionalProperties`
- * is false throughout, which is what lets the API guarantee the shape rather
- * than us hoping the model returns valid JSON.
+ * The exercise shape, built around whatever is in the library right now.
+ *
+ * `library_match` is an enum of real entry names rather than free text, so the
+ * model can only ever name something that exists — a match that has to be
+ * looked up by fuzzy string comparison afterwards is a match you can't trust.
  */
-const WEEK_SCHEMA = {
-  type: 'object',
-  properties: {
-    title: { type: 'string', description: 'Short name for the week.' },
-    note: {
-      type: 'string',
-      description:
-        'One or two sentences addressed to the person doing the workouts. Empty string if the source gives no guidance.',
-    },
-    workouts: {
-      type: 'array',
-      description: 'One entry per workout session in the plan.',
-      items: {
-        type: 'object',
-        properties: WORKOUT_PROPERTIES,
-        required: ['title', 'subtitle', 'exercises'],
-        additionalProperties: false,
+function exerciseSchema(library: LibraryChoice[]) {
+  const matchField = library.length
+    ? {
+        type: 'string',
+        enum: ['', ...library.map((entry) => entry.name)],
+        description:
+          "The name of the library exercise that is the same movement as this one, or '' if none of them is. Match only when it really is the same movement performed the same way — a different variation is not a match. Wording may differ ('Sit-to-stand' and 'Sit to stand' are the same); the movement may not.",
+      }
+    : { type: 'string', description: 'Always the empty string — the library is empty.' };
+
+  return {
+    type: 'object',
+    properties: {
+      name: { type: 'string' },
+      library_match: matchField,
+      category: {
+        type: 'string',
+        description:
+          "The part of the session this belongs to — 'Warm-up', 'Legs', 'Upper body', 'Core', 'Balance', 'Mobility', 'Cardio', 'Cool-down'. Use the source's own grouping when it has one. Empty string if the source gives no grouping at all.",
+      },
+      equipment: {
+        type: 'string',
+        description:
+          "What the exercise needs — 'Dumbbells', 'Chair', 'Resistance band', 'Cable machine'. Use 'Body weight' when nothing is needed. Empty string only if the source is genuinely unclear.",
+      },
+      instructions: {
+        type: 'string',
+        description:
+          'How to perform the exercise, in plain language. Empty string if the source gives none — do not invent technique cues.',
+      },
+      mode: {
+        type: 'string',
+        enum: ['reps', 'time'],
+        description: "'reps' for counted repetitions, 'time' for a hold or duration.",
+      },
+      sets: { type: 'integer', description: 'Number of sets. Use 1 if unspecified.' },
+      reps: { ...nullableInteger, description: "Reps per set. Null when mode is 'time'." },
+      duration_seconds: {
+        ...nullableInteger,
+        description: "Seconds to hold or perform. Null when mode is 'reps'.",
+      },
+      rest_seconds: {
+        type: 'integer',
+        description: 'Rest after each set. Use 30 if unspecified.',
       },
     },
-  },
-  required: ['title', 'note', 'workouts'],
-  additionalProperties: false,
-} as const;
+    required: [
+      'name',
+      'library_match',
+      'category',
+      'equipment',
+      'instructions',
+      'mode',
+      'sets',
+      'reps',
+      'duration_seconds',
+      'rest_seconds',
+    ],
+    additionalProperties: false,
+  };
+}
+
+function workoutProperties(library: LibraryChoice[]) {
+  return {
+    title: { type: 'string' },
+    subtitle: {
+      type: 'string',
+      description: 'Short description of the workout. Empty string if none is implied.',
+    },
+    exercises: { type: 'array', items: exerciseSchema(library) },
+  };
+}
+
+/** One workout on its own, for importing into a week that already exists. */
+function workoutSchema(library: LibraryChoice[]) {
+  return {
+    type: 'object',
+    properties: workoutProperties(library),
+    required: ['title', 'subtitle', 'exercises'],
+    additionalProperties: false,
+  };
+}
+
+function weekSchema(library: LibraryChoice[]) {
+  return {
+    type: 'object',
+    properties: {
+      title: { type: 'string', description: 'Short name for the week.' },
+      note: {
+        type: 'string',
+        description:
+          'One or two sentences addressed to the person doing the workouts. Empty string if the source gives no guidance.',
+      },
+      workouts: {
+        type: 'array',
+        description: 'One entry per workout session in the plan.',
+        items: {
+          type: 'object',
+          properties: workoutProperties(library),
+          required: ['title', 'subtitle', 'exercises'],
+          additionalProperties: false,
+        },
+      },
+    },
+    required: ['title', 'note', 'workouts'],
+    additionalProperties: false,
+  };
+}
+
+/**
+ * Attaches the matched library entry's id, and drops any match that isn't
+ * really in the library — the enum should make that impossible, but a draft
+ * that quietly points at nothing would be worse than one that admits it.
+ */
+function resolveMatches(exercises: DraftExercise[], library: LibraryChoice[]): void {
+  const byName = new Map(library.map((entry) => [entry.name, entry]));
+  for (const exercise of exercises) {
+    const entry = byName.get(exercise.library_match ?? '');
+    if (entry) {
+      exercise.library_id = entry.id;
+      exercise.library_name = entry.name;
+    } else {
+      exercise.library_match = '';
+    }
+  }
+}
 
 const SYSTEM_PROMPT = `You convert workout plans into structured data for a small family workout app. The people following these plans are the author's parents — typically older adults — so clarity matters more than brevity.
 
@@ -137,7 +189,8 @@ Rules:
 - Use "time" mode for holds, walks, and anything measured in seconds or minutes; "reps" for counted repetitions. Convert minutes to seconds.
 - Write instructions in plain, warm language a parent can follow without jargon. If the source gives no technique detail, return an empty string rather than inventing one.
 - If the source is a photo or screenshot and part of it is illegible, transcribe what you can read and leave the rest empty. Never fill gaps with plausible-sounding invention.
-- Never output links or URLs. Videos are attached separately by hand.`;
+- Never output links or URLs. Videos are attached separately by hand.
+- Where a library exercise is offered and one of them is the same movement, name it. That reuses the coach's own wording and their video. Being wrong here is worse than leaving it blank, so when in doubt, don't match.`;
 
 export function anthropicConfigured(): boolean {
   return Boolean(process.env.ANTHROPIC_API_KEY);
@@ -206,16 +259,21 @@ async function draftFromSources<T>(
  * Turns the pasted text and/or images into a whole week. The result is always
  * reviewed by the coach before it reaches anyone.
  */
-export async function draftWeekFromSources(input: ImportInput): Promise<DraftWeek> {
+export async function draftWeekFromSources(
+  input: ImportInput,
+  library: LibraryChoice[] = [],
+): Promise<DraftWeek> {
   const draft = await draftFromSources<DraftWeek>(
     input,
-    WEEK_SCHEMA,
+    weekSchema(library),
     'Turn this into a structured week of workouts',
   );
 
   if (!draft.workouts?.length) {
     throw new Error('No workouts could be found in what you provided.');
   }
+
+  for (const workout of draft.workouts) resolveMatches(workout.exercises ?? [], library);
 
   return draft;
 }
@@ -224,16 +282,21 @@ export async function draftWeekFromSources(input: ImportInput): Promise<DraftWee
  * The same, for one session at a time — for when you're filling a week in
  * workout by workout rather than importing a whole plan at once.
  */
-export async function draftWorkoutFromSources(input: ImportInput): Promise<DraftWorkout> {
+export async function draftWorkoutFromSources(
+  input: ImportInput,
+  library: LibraryChoice[] = [],
+): Promise<DraftWorkout> {
   const draft = await draftFromSources<DraftWorkout>(
     input,
-    WORKOUT_SCHEMA,
+    workoutSchema(library),
     'Turn this into one structured workout. Everything described belongs to a single session, even if it is written as several parts or rounds',
   );
 
   if (!draft.exercises?.length) {
     throw new Error('No exercises could be found in what you provided.');
   }
+
+  resolveMatches(draft.exercises, library);
 
   return draft;
 }

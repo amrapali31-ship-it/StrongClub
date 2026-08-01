@@ -143,30 +143,107 @@ function CheckFirst({ children }: { children: React.ReactNode }) {
   );
 }
 
-function ExerciseLines({ exercises }: { exercises: DraftExercise[] }) {
+/**
+ * Strips the library match off any exercise the coach has unticked, so the
+ * saved draft reflects what's on screen rather than what the model decided.
+ */
+function applyChoices<T extends DraftWeek | DraftWorkout>(draft: T, rejected: Set<string>): T {
+  const fix = (exercises: DraftExercise[], prefix: string) =>
+    exercises.map((exercise, i) =>
+      rejected.has(`${prefix}${i}`)
+        ? { ...exercise, library_match: '', library_id: undefined, library_name: undefined }
+        : exercise,
+    );
+
+  if ('workouts' in draft) {
+    return {
+      ...draft,
+      workouts: draft.workouts.map((workout, w) => ({
+        ...workout,
+        exercises: fix(workout.exercises, `${w}:`),
+      })),
+    };
+  }
+
+  return { ...draft, exercises: fix(draft.exercises, '0:') };
+}
+
+function ExerciseLines({
+  exercises,
+  prefix,
+  rejected,
+  onToggle,
+}: {
+  exercises: DraftExercise[];
+  prefix: string;
+  rejected: Set<string>;
+  onToggle: (key: string) => void;
+}) {
   return (
     <ul className="mt-3 flex flex-col gap-2">
-      {exercises.map((exercise, i) => (
-        <li key={i} className="border-t border-line pt-2 first:border-0 first:pt-0">
-          <p className="font-semibold">
-            {exercise.name}
-            {exercise.category && (
-              <span className="ml-2 text-xs font-bold tracking-widest text-brand uppercase">
-                {exercise.category}
-              </span>
+      {exercises.map((exercise, i) => {
+        const key = `${prefix}${i}`;
+        const matched = Boolean(exercise.library_id) && !rejected.has(key);
+
+        return (
+          <li key={i} className="border-t border-line pt-2 first:border-0 first:pt-0">
+            <p className="font-semibold">
+              {matched ? exercise.library_name : exercise.name}
+              {exercise.category && (
+                <span className="ml-2 text-xs font-bold tracking-widest text-brand uppercase">
+                  {exercise.category}
+                </span>
+              )}
+            </p>
+            <p className="text-sm text-muted">
+              {setsLabel(exercise)}
+              {exercise.equipment && <> &middot; {exercise.equipment}</>}
+            </p>
+
+            {exercise.library_id ? (
+              <label className="mt-1.5 flex cursor-pointer items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={matched}
+                  onChange={() => onToggle(key)}
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-brand"
+                />
+                <span className={matched ? 'text-ink' : 'text-muted'}>
+                  Use{' '}
+                  <span className="font-semibold">{exercise.library_name}</span> from your library
+                  {matched ? ' — its video and wording come with it' : ''}
+                  {!matched && (
+                    <>
+                      {' '}
+                      (adding &ldquo;{exercise.name}&rdquo; as a new one instead)
+                    </>
+                  )}
+                </span>
+              </label>
+            ) : (
+              exercise.instructions && (
+                <p className="mt-1 text-sm whitespace-pre-line text-muted">
+                  {exercise.instructions}
+                </p>
+              )
             )}
-          </p>
-          <p className="text-sm text-muted">
-            {setsLabel(exercise)}
-            {exercise.equipment && <> &middot; {exercise.equipment}</>}
-          </p>
-          {exercise.instructions && (
-            <p className="mt-1 text-sm whitespace-pre-line text-muted">{exercise.instructions}</p>
-          )}
-        </li>
-      ))}
+          </li>
+        );
+      })}
     </ul>
   );
+}
+
+/** Which library matches the coach has turned off, keyed by position. */
+function useChoices() {
+  const [rejected, setRejected] = useState<Set<string>>(new Set());
+  const toggle = (key: string) =>
+    setRejected((current) => {
+      const next = new Set(current);
+      if (!next.delete(key)) next.add(key);
+      return next;
+    });
+  return { rejected, toggle };
 }
 
 function ReviewWorkout({
@@ -178,9 +255,12 @@ function ReviewWorkout({
   target: ImportTarget;
   onDiscard: () => void;
 }) {
+  const { rejected, toggle } = useChoices();
+  const matched = draft.exercises.filter((e, i) => e.library_id && !rejected.has(`0:${i}`)).length;
+
   return (
     <form action={saveImportedWorkout}>
-      <input type="hidden" name="draft" value={JSON.stringify(draft)} />
+      <input type="hidden" name="draft" value={JSON.stringify(applyChoices(draft, rejected))} />
       <input type="hidden" name="weekId" value={target.id} />
 
       <CheckFirst>
@@ -213,12 +293,17 @@ function ReviewWorkout({
       {draft.subtitle && <p className="mt-3 text-base text-muted">{draft.subtitle}</p>}
 
       <p className="mt-6 text-sm text-muted">
-        {draft.exercises.length} exercise{draft.exercises.length === 1 ? '' : 's'} &middot; no videos
-        attached yet
+        {draft.exercises.length} exercise{draft.exercises.length === 1 ? '' : 's'}
+        {matched > 0 ? ` · ${matched} from your library, with their videos` : ' · no videos yet'}
       </p>
 
       <div className="card mt-3 p-4">
-        <ExerciseLines exercises={draft.exercises} />
+        <ExerciseLines
+          exercises={draft.exercises}
+          prefix="0:"
+          rejected={rejected}
+          onToggle={toggle}
+        />
       </div>
 
       <div className="mt-8 flex flex-col gap-3 sm:flex-row-reverse">
@@ -234,11 +319,17 @@ function ReviewWorkout({
 }
 
 function ReviewWeek({ draft, onDiscard }: { draft: DraftWeek; onDiscard: () => void }) {
+  const { rejected, toggle } = useChoices();
   const total = draft.workouts.reduce((sum, w) => sum + w.exercises.length, 0);
+  const matched = draft.workouts.reduce(
+    (sum, workout, w) =>
+      sum + workout.exercises.filter((e, i) => e.library_id && !rejected.has(`${w}:${i}`)).length,
+    0,
+  );
 
   return (
     <form action={saveImportedWeek}>
-      <input type="hidden" name="draft" value={JSON.stringify(draft)} />
+      <input type="hidden" name="draft" value={JSON.stringify(applyChoices(draft, rejected))} />
 
       <CheckFirst>It saves as a draft, so nobody sees it until you publish.</CheckFirst>
 
@@ -261,7 +352,8 @@ function ReviewWeek({ draft, onDiscard }: { draft: DraftWeek; onDiscard: () => v
 
       <p className="mt-6 text-sm text-muted">
         {draft.workouts.length} workout{draft.workouts.length === 1 ? '' : 's'} &middot; {total}{' '}
-        exercise{total === 1 ? '' : 's'} &middot; no videos attached yet
+        exercise{total === 1 ? '' : 's'}
+        {matched > 0 ? ` · ${matched} from your library, with their videos` : ' · no videos yet'}
       </p>
 
       <ul className="mt-3 flex flex-col gap-3">
@@ -269,7 +361,12 @@ function ReviewWeek({ draft, onDiscard }: { draft: DraftWeek; onDiscard: () => v
           <li key={i} className="card p-4">
             <p className="font-bold">{workout.title}</p>
             {workout.subtitle && <p className="text-sm text-muted">{workout.subtitle}</p>}
-            <ExerciseLines exercises={workout.exercises} />
+            <ExerciseLines
+              exercises={workout.exercises}
+              prefix={`${i}:`}
+              rejected={rejected}
+              onToggle={toggle}
+            />
           </li>
         ))}
       </ul>

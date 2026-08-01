@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { isAdmin } from '@/lib/auth';
+import { db } from '@/lib/db';
 import {
   draftWeekFromSources,
   draftWorkoutFromSources,
@@ -58,10 +59,16 @@ export async function POST(request: Request) {
   }
 
   try {
+    // Offered to the model as a closed list, so anything it picks really exists.
+    const library = (await db.listLibrary()).map((entry) => ({
+      id: entry.id,
+      name: entry.name,
+    }));
+
     const draft =
       scope === 'workout'
-        ? await draftWorkoutFromSources({ text, images })
-        : await draftWeekFromSources({ text, images });
+        ? await draftWorkoutFromSources({ text, images }, library)
+        : await draftWeekFromSources({ text, images }, library);
     return NextResponse.json({ draft });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Something went wrong.';
