@@ -19,6 +19,21 @@ const TABLES = [
 ];
 const BUCKET = 'workout-media';
 
+/**
+ * Columns added by later migrations. The tables themselves existing isn't
+ * enough — a missing column here fails at write time, long after this check
+ * would otherwise have said everything was fine.
+ */
+const COLUMNS = [
+  ['profiles', 'photo_url'],
+  ['workouts', 'emoji'],
+  ['workouts', 'sections'],
+  ['exercises', 'category'],
+  ['exercises', 'equipment'],
+  ['library_exercises', 'category'],
+  ['library_exercises', 'equipment'],
+];
+
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -67,6 +82,22 @@ for (const table of TABLES) {
   }
 }
 
+// `limit(0)` asks the API to resolve the column without returning any rows.
+const missingColumns = [];
+for (const [table, column] of COLUMNS) {
+  const { error } = await supabase.from(table).select(column).limit(0);
+  if (error) missingColumns.push(`${table}.${column}`);
+}
+
+if (missingColumns.length === 0) {
+  console.log(`  ✓ ${'columns'.padEnd(22)} all ${COLUMNS.length} up to date`);
+} else {
+  for (const name of missingColumns) {
+    console.log(`  ✗ ${name.padEnd(22)} column missing`);
+  }
+  failed = true;
+}
+
 const { data: buckets, error: bucketError } = await supabase.storage.listBuckets();
 if (bucketError) {
   console.log(`  ✗ ${BUCKET.padEnd(22)} ${bucketError.message}`);
@@ -86,6 +117,9 @@ if (bucketError) {
 
 if (failed) {
   console.error('\nSomething is missing. Run supabase/schema.sql in the Supabase SQL editor.');
+  if (missingColumns.length) {
+    console.error('It is safe to re-run in full — every statement is add-if-missing.');
+  }
   process.exit(1);
 }
 
