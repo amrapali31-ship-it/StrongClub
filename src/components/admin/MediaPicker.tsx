@@ -50,6 +50,9 @@ export function MediaPicker({ name, defaultUrl, defaultType }: Props) {
       setMediaType(result.mediaType);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed.');
+      // Surfaces it in the coach-only error strip too, with the stack, so a
+      // failure on a phone can be read without plugging the phone into a Mac.
+      window.dispatchEvent(new ErrorEvent('error', { error: err, message: String(err) }));
     } finally {
       setUploading(false);
     }

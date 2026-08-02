@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 import { logout } from '@/app/admin/actions';
 import { LoginForm } from '@/app/admin/LoginForm';
+import { ErrorWatch } from '@/components/admin/ErrorWatch';
 import { BottomNav, type NavItem } from '@/components/BottomNav';
 import { adminPasscodeIsSet, isAdmin } from '@/lib/auth';
 
@@ -45,6 +46,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <div className="mx-auto w-full max-w-3xl flex-1 px-5 pt-6 pb-28">{children}</div>
 
       <BottomNav items={NAV} />
+      <ErrorWatch />
     </>
   );
 }
