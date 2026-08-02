@@ -457,6 +457,47 @@ export async function removeLibraryExercise(formData: FormData): Promise<void> {
  * Copies a library entry into a workout — including its video. The workout gets
  * its own independent copy, so later edits to either side don't affect the other.
  */
+/**
+ * Replaces one exercise with a different movement from the library, in place.
+ *
+ * What changes is the movement — its name, wording, kit and video. What stays
+ * is everything about *this* workout: where it sits, which section it's in,
+ * and how much of it to do. Swapping a squat for an easier squat shouldn't
+ * quietly rewrite three sets of eight into whatever the library happens to
+ * store as a default.
+ *
+ * The exception is a change of kind. Putting a timed hold where a counted
+ * exercise was leaves reps meaningless, so in that case the library's own
+ * numbers come across with it.
+ */
+export async function swapExercise(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const exerciseId = str(formData, 'exerciseId');
+  const source = await db.getLibraryExercise(str(formData, 'libraryId'));
+
+  const current = await db.getExercise(exerciseId);
+  if (!current || !source) return;
+
+  const sameKind = current.mode === source.mode;
+
+  await db.updateExercise(exerciseId, {
+    name: source.name,
+    equipment: source.equipment ?? '',
+    instructions: source.instructions,
+    media_type: source.media_type,
+    media_url: source.media_url,
+    mode: source.mode,
+    sets: sameKind ? current.sets : source.sets,
+    reps: sameKind ? current.reps : source.reps,
+    duration_seconds: sameKind ? current.duration_seconds : source.duration_seconds,
+    rest_seconds: sameKind ? current.rest_seconds : source.rest_seconds,
+  });
+
+  revalidatePath(`/admin/workout/${current.workout_id}`);
+  revalidatePath(`/workout/${current.workout_id}`);
+  revalidatePath('/home');
+}
+
 export async function addExerciseFromLibrary(formData: FormData): Promise<void> {
   await requireAdmin();
   const workoutId = str(formData, 'workoutId');

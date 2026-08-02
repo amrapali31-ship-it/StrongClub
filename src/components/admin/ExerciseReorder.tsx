@@ -60,11 +60,14 @@ interface Props {
   groups: { category: string; heading: string; exercises: Exercise[] }[];
   /** Section names already in use, offered while renaming. */
   suggestions: string[];
+  /** What a row can be swapped for, without leaving this screen. */
+  library: { id: string; name: string; category: string; hasMedia: boolean }[];
   reorder: (formData: FormData) => Promise<void>;
   remove: (formData: FormData) => Promise<void>;
   rename: (formData: FormData) => Promise<void>;
   removeSection: (formData: FormData) => Promise<void>;
   moveSection: (formData: FormData) => Promise<void>;
+  swap: (formData: FormData) => Promise<void>;
 }
 
 function toRows(
@@ -100,11 +103,13 @@ export function ExerciseReorder({
   groups,
   showHeadings,
   suggestions,
+  library,
   reorder,
   remove,
   rename,
   removeSection,
   moveSection,
+  swap,
 }: Props) {
   const [rows, setRows] = useState<Row[]>(() => toRows(groups, showHeadings));
   const [, startTransition] = useTransition();
@@ -112,8 +117,16 @@ export function ExerciseReorder({
   // The server list is the source of truth; local state only holds the
   // optimistic order between a drop and the revalidate landing. Adjusting
   // during render (rather than in an effect) avoids a second paint.
+  // Includes what each row displays, not just which rows there are: swapping
+  // an exercise keeps its id and its place, so an id-only signature would
+  // leave the old name on screen until the next full navigation.
   const signature = groups
-    .map((g) => `${g.category}:${g.exercises.map((e) => e.id).join(',')}`)
+    .map(
+      (g) =>
+        `${g.category}:${g.exercises
+          .map((e) => `${e.id}~${e.name}~${e.media_type}~${setsLabel(e)}~${e.equipment}`)
+          .join(',')}`,
+    )
     .join('|');
   const [seenSignature, setSeenSignature] = useState(signature);
   if (signature !== seenSignature) {
@@ -191,7 +204,9 @@ export function ExerciseReorder({
               <SortableExercise
                 key={row.id}
                 exercise={row.exercise}
+                library={library}
                 remove={remove}
+                swap={swap}
               />
             ),
           )}
@@ -235,11 +250,16 @@ function HeadingItem({
 
 function SortableExercise({
   exercise,
+  library,
   remove,
+  swap,
 }: {
   exercise: Exercise;
+  library: Props['library'];
   remove: (formData: FormData) => Promise<void>;
+  swap: (formData: FormData) => Promise<void>;
 }) {
+  const [swapping, setSwapping] = useState(false);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: exercise.id,
   });
@@ -248,7 +268,7 @@ function SortableExercise({
     <li
       ref={setNodeRef}
       style={{ transform: CSS.Translate.toString(transform), transition }}
-      className={`card relative flex touch-manipulation items-center gap-2 p-3 ${
+      className={`card relative flex touch-manipulation items-start gap-2 p-3 ${
         isDragging ? 'z-20 border-brand opacity-90 shadow-xl shadow-brand/20' : ''
       }`}
     >
@@ -270,16 +290,69 @@ function SortableExercise({
         name={exercise.name}
       />
 
-      <Link href={`/admin/exercise/${exercise.id}`} className="min-w-0 flex-1 py-1">
-        <p className="font-bold">{exercise.name}</p>
-        <p className="text-sm text-muted">
-          {setsLabel(exercise)}
-          {exercise.equipment && <> &middot; {exercise.equipment}</>}
-          {exercise.media_type === 'none' && (
-            <span className="ml-2 whitespace-nowrap text-brand">no video</span>
-          )}
-        </p>
-      </Link>
+      <div className="min-w-0 flex-1">
+        <Link href={`/admin/exercise/${exercise.id}`} className="block py-1">
+          <p className="font-bold">{exercise.name}</p>
+          <p className="text-sm text-muted">
+            {setsLabel(exercise)}
+            {exercise.equipment && <> &middot; {exercise.equipment}</>}
+            {exercise.media_type === 'none' && (
+              <span className="ml-2 whitespace-nowrap text-brand">no video</span>
+            )}
+          </p>
+        </Link>
+
+        {library.length > 0 && !swapping && (
+          <button
+            type="button"
+            onClick={() => setSwapping(true)}
+            className="text-sm font-semibold text-muted transition hover:text-brand"
+          >
+            swap
+          </button>
+        )}
+
+        {swapping && (
+          <form action={swap} onSubmit={() => setSwapping(false)} className="mt-2 flex gap-2">
+            <input type="hidden" name="exerciseId" value={exercise.id} />
+            <select
+              name="libraryId"
+              defaultValue=""
+              aria-label={`Replace ${exercise.name} with`}
+              className="field min-w-0 flex-1 py-2 text-sm"
+            >
+              <option value="" disabled>
+                Replace with…
+              </option>
+              {[...new Set(library.map((entry) => entry.category))].sort().map((category) => (
+                <optgroup key={category} label={category || 'Other'}>
+                  {library
+                    .filter((entry) => entry.category === category)
+                    .map((entry) => (
+                      <option key={entry.id} value={entry.id}>
+                        {entry.name}
+                        {entry.hasMedia ? ' 🎬' : ''}
+                      </option>
+                    ))}
+                </optgroup>
+              ))}
+            </select>
+            <button
+              type="submit"
+              className="shrink-0 rounded-lg bg-brand px-3 py-2 text-sm font-bold text-canvas"
+            >
+              Swap
+            </button>
+            <button
+              type="button"
+              onClick={() => setSwapping(false)}
+              className="shrink-0 px-1 text-sm font-semibold text-muted hover:text-ink"
+            >
+              Cancel
+            </button>
+          </form>
+        )}
+      </div>
 
       <form action={remove} className="shrink-0">
         <input type="hidden" name="exerciseId" value={exercise.id} />

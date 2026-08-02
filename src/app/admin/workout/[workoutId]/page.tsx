@@ -7,6 +7,7 @@ import {
   removeExercise,
   addSection,
   duplicateWorkout,
+  swapExercise,
   moveSection,
   removeSection,
   removeWorkout,
@@ -44,6 +45,14 @@ export default async function AdminWorkout({
   // A section the coach added by hand always earns its heading, even when it's
   // the only one — it's there precisely so there's somewhere to drag things.
   const showHeadings = shouldShowGroupHeadings(groups) || declaredSections.length > 0;
+
+  // Only what a row needs to offer a replacement — not the whole library row.
+  const libraryChoices = library.map((entry) => ({
+    id: entry.id,
+    name: entry.name,
+    category: entry.category,
+    hasMedia: entry.media_type !== 'none',
+  }));
 
   // Offer whatever's already in use anywhere, plus the built-in suggestions.
   const sectionSuggestions = [
@@ -105,11 +114,13 @@ export default async function AdminWorkout({
               groups={groups}
               showHeadings={showHeadings}
               suggestions={sectionSuggestions}
+              library={libraryChoices}
               reorder={reorderExercises}
               remove={removeExercise}
               rename={renameSection}
               removeSection={removeSection}
               moveSection={moveSection}
+              swap={swapExercise}
             />
             {exercises.length > 0 && (
               <p className="mt-3 text-sm text-muted">
