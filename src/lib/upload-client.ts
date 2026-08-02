@@ -67,10 +67,46 @@ function send(
   });
 }
 
-/** Browser exceptions vary wildly in wording; keep whatever detail there is. */
+/**
+ * Browser exceptions vary wildly in wording, and the wording alone is often
+ * useless — "the string did not match the expected pattern" is WebKit's, and
+ * it says nothing about what string or what pattern. The type name is what
+ * makes it searchable, so it's kept.
+ */
 function describe(error: unknown): string {
-  if (error instanceof Error) return error.message;
+  if (error instanceof Error) {
+    return error.name && error.name !== 'Error' ? `${error.name}: ${error.message}` : error.message;
+  }
   return String(error);
+}
+
+/**
+ * Watches for errors that escape the promise chain entirely.
+ *
+ * Some failures on iOS surface as an unhandled rejection rather than a
+ * rejected await, which would otherwise leave the uploader showing nothing at
+ * all while the browser logged the real cause somewhere nobody can reach.
+ */
+function watchForStrayErrors(): { stop: () => string | null } {
+  let stray: string | null = null;
+
+  const onError = (event: ErrorEvent) => {
+    stray ??= describe(event.error ?? event.message);
+  };
+  const onRejection = (event: PromiseRejectionEvent) => {
+    stray ??= describe(event.reason);
+  };
+
+  window.addEventListener('error', onError);
+  window.addEventListener('unhandledrejection', onRejection);
+
+  return {
+    stop: () => {
+      window.removeEventListener('error', onError);
+      window.removeEventListener('unhandledrejection', onRejection);
+      return stray;
+    },
+  };
 }
 
 /**
@@ -104,6 +140,19 @@ export async function uploadFile(
   const problem = checkUpload(file);
   if (problem) throw new Error(problem);
 
+  const watcher = watchForStrayErrors();
+  try {
+    return await run(file, onProgress);
+  } catch (error) {
+    const stray = watcher.stop();
+    const message = describe(error);
+    throw new Error(stray && !message.includes(stray) ? `${message} (${stray})` : message);
+  } finally {
+    watcher.stop();
+  }
+}
+
+async function run(file: File, onProgress: (percent: number) => void): Promise<Uploaded> {
   const signed = await step('Preparing the upload', async () => {
     const response = await fetch('/api/upload/sign', {
       method: 'POST',
