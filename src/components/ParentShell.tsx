@@ -9,7 +9,7 @@ const NAV: NavItem[] = [
   // A workout or another week is still "this week" as far as the bar goes.
   { href: '/home', label: 'This week', icon: 'calendar', also: ['/workout', '/week'] },
   { href: '/progress', label: 'Progress', icon: 'chart' },
-  { href: '/', label: 'Switch', icon: 'person' },
+  { label: 'Switch', icon: 'person', action: switchProfile },
 ];
 
 /**
