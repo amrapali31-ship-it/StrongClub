@@ -25,12 +25,18 @@ async function readJson(response: Response): Promise<Record<string, unknown>> {
   }
 }
 
-/** XHR rather than fetch: only XHR can report how far along an upload is. */
+/**
+ * XHR rather than fetch: only XHR can report how far along an upload is.
+ *
+ * No Content-Type is set by hand. Sending a File makes the browser derive one
+ * from the file itself, and `setRequestHeader` is picky enough about its value
+ * that Safari answers a bad one with "the string did not match the expected
+ * pattern" — a sentence that tells whoever's holding the phone nothing at all.
+ */
 function send(
   method: string,
   url: string,
   body: XMLHttpRequestBodyInit,
-  headers: Record<string, string>,
   onProgress: (percent: number) => void,
 ): Promise<{ status: number; text: string }> {
   return new Promise((resolve, reject) => {
@@ -43,14 +49,45 @@ function send(
       resolve({ status: request.status, text: request.responseText }),
     );
     request.addEventListener('error', () =>
-      reject(new Error('Upload failed — check your connection and try again.')),
+      reject(new Error('The connection dropped during the upload. Try again.')),
     );
     request.addEventListener('abort', () => reject(new Error('Upload cancelled.')));
+    request.addEventListener('timeout', () =>
+      reject(new Error('The upload timed out. On a slow connection, try a smaller file.')),
+    );
 
-    request.open(method, url);
-    for (const [key, value] of Object.entries(headers)) request.setRequestHeader(key, value);
+    try {
+      request.open(method, url);
+    } catch (error) {
+      reject(new Error(`Could not start the upload: ${describe(error)}`));
+      return;
+    }
+
     request.send(body);
   });
+}
+
+/** Browser exceptions vary wildly in wording; keep whatever detail there is. */
+function describe(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
+
+/**
+ * Names the step that failed.
+ *
+ * A bare browser message ("the string did not match the expected pattern")
+ * is untraceable once it reaches someone standing in a kitchen with a phone.
+ * Prefixing it with the step turns a mystery into something reportable.
+ */
+async function step<T>(what: string, run: () => Promise<T>): Promise<T> {
+  try {
+    return await run();
+  } catch (error) {
+    const message = describe(error);
+    // Errors we raised ourselves already read as sentences; don't double up.
+    throw new Error(message.includes(what) ? message : `${what}: ${message}`);
+  }
 }
 
 /**
@@ -67,24 +104,24 @@ export async function uploadFile(
   const problem = checkUpload(file);
   if (problem) throw new Error(problem);
 
-  const signResponse = await fetch('/api/upload/sign', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ name: file.name, size: file.size, type: file.type }),
-  });
+  const signed = await step('Preparing the upload', async () => {
+    const response = await fetch('/api/upload/sign', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: file.name, size: file.size, type: file.type }),
+    });
 
-  const signed = await readJson(signResponse);
-  if (!signResponse.ok) throw new Error(String(signed.error ?? 'Upload failed.'));
+    const body = await readJson(response);
+    if (!response.ok) throw new Error(String(body.error ?? 'Upload failed.'));
+    return body;
+  });
 
   const mediaType = (signed.mediaType as MediaType) ?? 'image';
 
   if (typeof signed.uploadUrl === 'string' && typeof signed.publicUrl === 'string') {
-    const result = await send(
-      'PUT',
-      signed.uploadUrl,
-      file,
-      { 'content-type': file.type },
-      onProgress,
+    const uploadUrl = signed.uploadUrl;
+    const result = await step('Sending the file', () =>
+      send('PUT', uploadUrl, file, onProgress),
     );
 
     if (result.status >= 400) {
@@ -107,7 +144,9 @@ export async function uploadFile(
   // Local development: no storage to sign for, so the app takes the bytes.
   const body = new FormData();
   body.append('file', file);
-  const result = await send('POST', '/api/upload', body, {}, onProgress);
+  const result = await step('Sending the file', () =>
+    send('POST', '/api/upload', body, onProgress),
+  );
 
   let data: { url?: string; mediaType?: MediaType; error?: string } = {};
   try {

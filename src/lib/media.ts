@@ -79,8 +79,15 @@ export function checkUpload(file: { name: string; size: number; type: string }):
     const mb = Math.round(file.size / 1024 / 1024);
     return `${file.name} is ${mb} MB — keep uploads under ${MAX_UPLOAD_BYTES / 1024 / 1024} MB.`;
   }
+  if (/^image\/hei[cf]$/.test(file.type)) {
+    // iPhones shoot HEIC. Safari converts it to JPEG when the photo comes from
+    // the Photos library, but hands it over untouched from the Files app — and
+    // Android browsers can't display HEIC, so storing it would break the very
+    // screen it was meant for.
+    return 'That photo is in iPhone HEIC format, which some phones can\'t display. Pick it from Photos rather than Files, or take a screenshot of it and upload that.';
+  }
   if (!ALLOWED_UPLOAD_TYPES.test(file.type)) {
-    return 'Only images (png, jpg, gif, webp) and videos (mp4, mov, webm) can be uploaded.';
+    return `That file is a ${file.type || 'kind the browser could not identify'}. Use an image (png, jpg, gif, webp) or a video (mp4, mov, webm).`;
   }
   return null;
 }
