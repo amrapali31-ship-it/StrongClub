@@ -4,10 +4,14 @@ import { useRef, useState } from 'react';
 
 import { saveImportedWeek, saveImportedWorkout } from '@/app/admin/actions';
 import { EmojiField } from '@/components/admin/EmojiField';
+import { fitWithin, totalBytes } from '@/lib/image-shrink';
 import type { DraftExercise, DraftWeek, DraftWorkout } from '@/lib/importer';
 import { setsLabel } from '@/lib/media';
 
 type Stage = 'input' | 'working' | 'review';
+
+/** Under the ~4.5 MB a serverless request body allows, with room for the text. */
+const BUDGET = 3_800_000;
 
 /** The week a single-workout import is being added to. Absent for a whole plan. */
 export interface ImportTarget {
@@ -34,13 +38,36 @@ export function PlanImporter({ target }: { target?: ImportTarget }) {
       const body = new FormData();
       body.append('text', text);
       body.append('scope', noun);
-      files.forEach((file) => body.append('images', file));
+
+      // Resized here rather than sent as-is: five phone photos are far more
+      // than a serverless request body will carry, and the platform rejects
+      // the whole thing with a page that isn't even JSON.
+      const shrunk = await fitWithin(files, BUDGET);
+      shrunk.forEach((file) => body.append('images', file));
+
+      if (totalBytes(shrunk) > BUDGET) {
+        throw new Error(
+          `Even shrunk, those ${files.length} images come to ${Math.round(
+            totalBytes(shrunk) / 100_000,
+          ) / 10} MB — more than can be sent at once. Try three or four at a time.`,
+        );
+      }
 
       const response = await fetch('/api/admin/import', { method: 'POST', body });
-      const data = (await response.json()) as {
-        draft?: DraftWeek | DraftWorkout;
-        error?: string;
-      };
+
+      // A body that's too big comes back as plain text, and parsing that as
+      // JSON produces a error about strings and patterns rather than a cause.
+      const raw = await response.text();
+      let data: { draft?: DraftWeek | DraftWorkout; error?: string };
+      try {
+        data = JSON.parse(raw) as typeof data;
+      } catch {
+        throw new Error(
+          response.status === 413
+            ? 'Those images were too large to send. Try fewer at a time.'
+            : `The server replied with ${response.status}. ${raw.slice(0, 80)}`.trim(),
+        );
+      }
 
       if (!response.ok || !data.draft) throw new Error(data.error ?? 'Import failed.');
 
@@ -104,7 +131,7 @@ export function PlanImporter({ target }: { target?: ImportTarget }) {
       </button>
       <p className="mt-2 text-sm text-muted">
         A physio&rsquo;s handout, a screenshot of another app, a photo of something written down. Up
-        to 6 images.
+        to 6 images &mdash; they&rsquo;re shrunk before sending, so several at once is fine.
       </p>
 
       {error && (
