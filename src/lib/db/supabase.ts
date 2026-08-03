@@ -163,6 +163,11 @@ export const supabaseDb: Database = {
     );
   },
 
+  async listAllExercises() {
+    const sb = supabaseAdmin();
+    return unwrap(await sb.from('exercises').select('*'));
+  },
+
   async getExercise(id) {
     const sb = supabaseAdmin();
     const { data, error } = await sb.from('exercises').select('*').eq('id', id).maybeSingle();

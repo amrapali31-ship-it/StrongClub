@@ -161,6 +161,8 @@ export interface Database {
   deleteWorkout(id: string): Promise<void>;
 
   listExercises(workoutId: string): Promise<Exercise[]>;
+  /** Every exercise in every week. Only used to label already-uploaded media. */
+  listAllExercises(): Promise<Exercise[]>;
   getExercise(id: string): Promise<Exercise | null>;
   createExercise(data: Partial<Exercise> & { workout_id: string; name: string }): Promise<Exercise>;
   updateExercise(id: string, patch: Partial<Exercise>): Promise<Exercise>;

@@ -222,6 +222,10 @@ export const localDb: Database = {
     return query((d) => d.exercises.filter((e) => e.workout_id === workoutId).sort(byPosition));
   },
 
+  async listAllExercises() {
+    return query((d) => [...d.exercises]);
+  },
+
   async getExercise(id) {
     return query((d) => d.exercises.find((e) => e.id === id) ?? null);
   },
