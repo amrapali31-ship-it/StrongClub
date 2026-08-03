@@ -2,33 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-/** Short chime so you can look away from the screen during a hold. */
-function beep() {
-  try {
-    const Ctx =
-      window.AudioContext ??
-      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    if (!Ctx) return;
-    const ctx = new Ctx();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = 660;
-    gain.gain.setValueAtTime(0.001, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.5);
-    osc.onended = () => void ctx.close();
-  } catch {
-    // Audio is a nicety; never let it break the page.
-  }
-}
+import { beepEnd, beepStart, beepTick, buzz, unlockAudio } from '@/lib/beeper';
 
 /**
  * Optional countdown for timed holds. Nothing depends on it — the target is
  * printed above, so anyone who'd rather use the clock on the wall can.
+ *
+ * It sounds at both ends: once when it starts, so you can look away and begin,
+ * and twice when it finishes, so you know to stop without checking the screen.
  */
 export function InlineTimer({ seconds }: { seconds: number }) {
   const [remaining, setRemaining] = useState(seconds);
@@ -41,22 +22,32 @@ export function InlineTimer({ seconds }: { seconds: number }) {
     return () => clearInterval(id);
   }, [running]);
 
+  // The last three seconds tick, so the end never arrives unannounced.
+  useEffect(() => {
+    if (!running || remaining === 0 || remaining > 3) return;
+    beepTick();
+  }, [remaining, running]);
+
   useEffect(() => {
     if (remaining > 0 || fired.current) return;
     fired.current = true;
     setRunning(false);
-    beep();
-    try {
-      navigator.vibrate?.(200);
-    } catch {
-      // Not supported on iOS Safari — fine.
-    }
+    beepEnd();
+    buzz([120, 80, 200]);
   }, [remaining]);
 
   const mins = Math.floor(remaining / 60);
   const secs = remaining % 60;
   const finished = remaining === 0;
   const label = mins > 0 ? `${mins}:${String(secs).padStart(2, '0')}` : `${secs}`;
+
+  function start() {
+    // Inside the tap, which is the only moment iOS will open audio for us.
+    unlockAudio();
+    beepStart();
+    buzz(60);
+    setRunning(true);
+  }
 
   return (
     <div className="mt-3 flex items-center gap-3">
@@ -74,10 +65,14 @@ export function InlineTimer({ seconds }: { seconds: number }) {
           if (finished) {
             fired.current = false;
             setRemaining(seconds);
-            setRunning(true);
+            start();
             return;
           }
-          setRunning((r) => !r);
+          if (running) {
+            setRunning(false);
+            return;
+          }
+          start();
         }}
         className="btn-secondary min-h-12 px-5 text-base"
       >

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import { youTubeEmbedUrl, youTubeId } from '@/lib/media';
+import { firstFrame, youTubeEmbedUrl, youTubeId } from '@/lib/media';
 import type { MediaType } from '@/lib/types';
 
 interface Props {
@@ -69,7 +69,7 @@ export function ExerciseMedia({ mediaType, url, name }: Props) {
     return (
       <div className={frame}>
         <video
-          src={url}
+          src={firstFrame(url)}
           className="absolute inset-0 h-full w-full object-contain"
           controls
           playsInline

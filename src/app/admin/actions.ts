@@ -112,6 +112,7 @@ export async function repeatLastWeek(): Promise<void> {
       emoji: workout.emoji,
       subtitle: workout.subtitle,
       sections: workout.sections ?? [],
+      section_rounds: workout.section_rounds ?? {},
       position: workout.position,
     });
     for (const exercise of await db.listExercises(workout.id)) {
@@ -166,6 +167,7 @@ export async function duplicateWeek(formData: FormData): Promise<void> {
       emoji: workout.emoji,
       subtitle: workout.subtitle,
       sections: workout.sections ?? [],
+      section_rounds: workout.section_rounds ?? {},
       position: workout.position,
     });
 
@@ -362,6 +364,7 @@ export async function duplicateWorkout(formData: FormData): Promise<void> {
     emoji: source.emoji,
     subtitle: source.subtitle,
     sections: source.sections ?? [],
+    section_rounds: source.section_rounds ?? {},
     position: source.position,
   });
 
@@ -640,9 +643,22 @@ export async function renameSection(formData: FormData): Promise<void> {
   // Keep the workout's own list in step, or a renamed empty section would
   // vanish and the old name would linger.
   const workout = await db.getWorkout(workoutId);
-  if (workout?.sections?.includes(from)) {
-    const next = workout.sections.map((s) => (s === from ? to : s));
-    await db.updateWorkout(workoutId, { sections: [...new Set(next.filter(Boolean))] });
+  if (workout) {
+    const patch: Partial<typeof workout> = {};
+
+    if (workout.sections?.includes(from)) {
+      const next = workout.sections.map((s) => (s === from ? to : s));
+      patch.sections = [...new Set(next.filter(Boolean))];
+    }
+
+    // Rounds belong to the block, not to its name.
+    const rounds = workout.section_rounds ?? {};
+    if (rounds[from] !== undefined) {
+      const rest = Object.fromEntries(Object.entries(rounds).filter(([key]) => key !== from));
+      patch.section_rounds = to ? { ...rest, [to]: rounds[from] } : rest;
+    }
+
+    if (Object.keys(patch).length > 0) await db.updateWorkout(workoutId, patch);
   }
 
   revalidatePath(`/admin/workout/${workoutId}`);
@@ -697,6 +713,33 @@ export async function addSection(formData: FormData): Promise<void> {
   revalidatePath(`/workout/${workoutId}`);
 }
 
+/**
+ * Sets how many times a section is repeated as a block — the superset case,
+ * where you do A, B and C in order and then go round again.
+ *
+ * One round is the normal state, so it's stored by removing the entry rather
+ * than writing 1: a workout with nothing repeated carries no rounds at all.
+ */
+export async function setSectionRounds(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const workoutId = str(formData, 'workoutId');
+  const name = str(formData, 'name');
+  const rounds = Math.max(1, Math.min(20, Math.round(num(formData, 'rounds', 1))));
+
+  const workout = await db.getWorkout(workoutId);
+  if (!workout || !name) return;
+
+  const rest = Object.fromEntries(
+    Object.entries(workout.section_rounds ?? {}).filter(([key]) => key !== name),
+  );
+  const next = rounds > 1 ? { ...rest, [name]: rounds } : rest;
+
+  await db.updateWorkout(workoutId, { section_rounds: next });
+  revalidatePath(`/admin/workout/${workoutId}`);
+  revalidatePath(`/workout/${workoutId}`);
+  revalidatePath('/home');
+}
+
 /** Shifts a section one place up or down, exercises and all. */
 export async function moveSection(formData: FormData): Promise<void> {
   await requireAdmin();
@@ -736,6 +779,9 @@ export async function removeSection(formData: FormData): Promise<void> {
 
   await db.updateWorkout(workoutId, {
     sections: (workout.sections ?? []).filter((s) => s !== name),
+    section_rounds: Object.fromEntries(
+      Object.entries(workout.section_rounds ?? {}).filter(([key]) => key !== name),
+    ),
   });
   revalidatePath(`/admin/workout/${workoutId}`);
   revalidatePath(`/workout/${workoutId}`);

@@ -33,6 +33,13 @@ export interface Workout {
    * list is only what would otherwise be invisible.
    */
   sections: string[];
+  /**
+   * How many times a section is repeated as a block — A, B, C, then round two.
+   * Keyed by section name; absent or 1 means straight through. Kept apart from
+   * `sections` so an implicit section (one that exists only because exercises
+   * share a category) can have rounds without being declared first.
+   */
+  section_rounds: Record<string, number>;
   subtitle: string;
   position: number;
   created_at: string;

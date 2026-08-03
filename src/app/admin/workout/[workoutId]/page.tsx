@@ -7,6 +7,7 @@ import {
   removeExercise,
   addSection,
   duplicateWorkout,
+  setSectionRounds,
   swapExercise,
   moveSection,
   removeSection,
@@ -115,12 +116,14 @@ export default async function AdminWorkout({
               showHeadings={showHeadings}
               suggestions={sectionSuggestions}
               library={libraryChoices}
+              rounds={workout.section_rounds ?? {}}
               reorder={reorderExercises}
               remove={removeExercise}
               rename={renameSection}
               removeSection={removeSection}
               moveSection={moveSection}
               swap={swapExercise}
+              setRounds={setSectionRounds}
             />
             {exercises.length > 0 && (
               <p className="mt-3 text-sm text-muted">

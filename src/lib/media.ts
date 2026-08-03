@@ -31,6 +31,19 @@ export function youTubeId(url: string): string | null {
   return match?.[1] ?? null;
 }
 
+/**
+ * Nudges a video URL to its first frame so it has something to show.
+ *
+ * iOS Safari won't decode a frame just because `preload="metadata"` asked it
+ * to — an uploaded clip sits as a black rectangle until it's tapped. Asking
+ * for a time fragment makes it seek there and paint that frame, which is the
+ * poster we never had to generate.
+ */
+export function firstFrame(url: string): string {
+  if (!url || url.includes('#')) return url;
+  return `${url}#t=0.1`;
+}
+
 export function youTubeEmbedUrl(url: string): string | null {
   const id = youTubeId(url);
   if (!id) return null;

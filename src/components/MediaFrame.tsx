@@ -1,4 +1,4 @@
-import { youTubeEmbedUrl } from '@/lib/media';
+import { firstFrame, youTubeEmbedUrl } from '@/lib/media';
 import type { MediaType } from '@/lib/types';
 
 interface Props {
@@ -33,7 +33,7 @@ export function MediaFrame({ mediaType, url, name, autoPlay = false, className =
     return (
       <div className={`${frame} aspect-video`}>
         <video
-          src={url}
+          src={firstFrame(url)}
           className="absolute inset-0 h-full w-full object-contain"
           controls
           playsInline
@@ -92,7 +92,7 @@ export function MediaThumb({ mediaType, url, name }: Omit<Props, 'autoPlay' | 'c
   }
 
   if (mediaType === 'video') {
-    return <video src={url} className={base} muted playsInline preload="metadata" />;
+    return <video src={firstFrame(url)} className={base} muted playsInline preload="metadata" />;
   }
 
   return (

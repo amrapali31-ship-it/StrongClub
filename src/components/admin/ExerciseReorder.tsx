@@ -62,12 +62,15 @@ interface Props {
   suggestions: string[];
   /** What a row can be swapped for, without leaving this screen. */
   library: { id: string; name: string; category: string; hasMedia: boolean }[];
+  /** Section name to how many times the block repeats. Absent means once. */
+  rounds: Record<string, number>;
   reorder: (formData: FormData) => Promise<void>;
   remove: (formData: FormData) => Promise<void>;
   rename: (formData: FormData) => Promise<void>;
   removeSection: (formData: FormData) => Promise<void>;
   moveSection: (formData: FormData) => Promise<void>;
   swap: (formData: FormData) => Promise<void>;
+  setRounds: (formData: FormData) => Promise<void>;
 }
 
 function toRows(
@@ -104,12 +107,14 @@ export function ExerciseReorder({
   showHeadings,
   suggestions,
   library,
+  rounds,
   reorder,
   remove,
   rename,
   removeSection,
   moveSection,
   swap,
+  setRounds,
 }: Props) {
   const [rows, setRows] = useState<Row[]>(() => toRows(groups, showHeadings));
   const [, startTransition] = useTransition();
@@ -195,9 +200,11 @@ export function ExerciseReorder({
                   index={row.index}
                   count={row.count}
                   suggestions={suggestions}
+                  rounds={rounds[row.category] ?? 1}
                   rename={rename}
                   removeSection={removeSection}
                   moveSection={moveSection}
+                  setRounds={setRounds}
                 />
               </HeadingItem>
             ) : (
@@ -375,9 +382,11 @@ function SectionHeading({
   index,
   count,
   suggestions,
+  rounds,
   rename,
   removeSection,
   moveSection,
+  setRounds,
 }: {
   workoutId: string;
   category: string;
@@ -387,6 +396,8 @@ function SectionHeading({
   index: number;
   count: number;
   suggestions: string[];
+  rounds: number;
+  setRounds: (formData: FormData) => Promise<void>;
   rename: (formData: FormData) => Promise<void>;
   removeSection: (formData: FormData) => Promise<void>;
   moveSection: (formData: FormData) => Promise<void>;
@@ -430,6 +441,8 @@ function SectionHeading({
             />
           </span>
         )}
+
+        {category && <RoundsControl workoutId={workoutId} category={category} rounds={rounds} setRounds={setRounds} />}
 
         {/* Only empty sections can be removed, so this can't orphan anything. */}
         {isEmpty && category && (
@@ -509,6 +522,73 @@ function MoveSectionButton({
         className="flex h-9 w-7 items-center justify-center text-base text-muted transition hover:text-ink disabled:opacity-25 disabled:hover:text-muted"
       >
         {direction === 'up' ? '↑' : '↓'}
+      </button>
+    </form>
+  );
+}
+
+/**
+ * How many times the section repeats as a block — the superset case.
+ *
+ * Shown only once it's more than one, so a workout of straightforward sets
+ * isn't covered in "×1" badges saying nothing.
+ */
+function RoundsControl({
+  workoutId,
+  category,
+  rounds,
+  setRounds,
+}: {
+  workoutId: string;
+  category: string;
+  rounds: number;
+  setRounds: (formData: FormData) => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        onClick={() => setEditing(true)}
+        className={`shrink-0 rounded-full px-2 py-1 text-xs font-bold tracking-normal normal-case transition ${
+          rounds > 1 ? 'bg-brand-tint text-brand' : 'text-muted hover:text-ink'
+        }`}
+      >
+        {rounds > 1 ? `× ${rounds} rounds` : 'rounds'}
+      </button>
+    );
+  }
+
+  return (
+    <form
+      action={setRounds}
+      onSubmit={() => setEditing(false)}
+      className="flex shrink-0 items-center gap-1"
+    >
+      <input type="hidden" name="workoutId" value={workoutId} />
+      <input type="hidden" name="name" value={category} />
+      <select
+        name="rounds"
+        defaultValue={String(rounds)}
+        aria-label={`Rounds of ${category}`}
+        className="field w-28 py-1.5 text-sm"
+      >
+        {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+          <option key={n} value={n}>
+            {n === 1 ? 'Once through' : `${n} rounds`}
+          </option>
+        ))}
+      </select>
+      <button type="submit" className="rounded-lg bg-brand px-2 py-1.5 text-xs font-bold text-canvas">
+        Set
+      </button>
+      <button
+        type="button"
+        onClick={() => setEditing(false)}
+        className="px-1 text-xs font-semibold text-muted normal-case"
+      >
+        Cancel
       </button>
     </form>
   );

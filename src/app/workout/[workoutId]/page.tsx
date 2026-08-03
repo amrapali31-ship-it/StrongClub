@@ -6,6 +6,7 @@ import { BackLink } from '@/components/BackLink';
 import { ExerciseMedia } from '@/components/ExerciseMedia';
 import { InlineTimer } from '@/components/InlineTimer';
 import { ParentShell } from '@/components/ParentShell';
+import { WorkoutSession } from '@/components/WorkoutSession';
 import { getActiveProfileId } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { setsLabel } from '@/lib/media';
@@ -37,6 +38,7 @@ export default async function WorkoutOverview({
   // Numbered by where things actually appear, not by stored position — moving a
   // section around shouldn't leave the list counting 3, 4, 1, 2.
   const running = groups.flatMap((group) => group.exercises);
+  const rounds = workout.section_rounds ?? {};
 
   // One line at the top so they can fetch everything before starting rather
   // than getting up halfway through. Order follows the workout, not the
@@ -84,15 +86,33 @@ export default async function WorkoutOverview({
         you can see where you got to.
       </p>
 
+      <WorkoutSession workoutId={workout.id} title={workout.title} />
+
       {groups.map((group) => (
         <section key={group.category || 'other'} className="mt-8 first:mt-6">
           {showHeadings && (
-            <h2 className="mb-3 flex items-baseline gap-2 text-sm font-bold tracking-widest text-brand uppercase">
+            <h2 className="mb-3 flex flex-wrap items-baseline gap-2 text-sm font-bold tracking-widest text-brand uppercase">
               {group.heading}
               <span className="text-xs font-semibold tracking-normal text-muted normal-case">
                 {group.exercises.length} {group.exercises.length === 1 ? 'exercise' : 'exercises'}
               </span>
+              {(rounds[group.category] ?? 1) > 1 && (
+                <span className="rounded-full bg-brand-tint px-2 py-0.5 text-xs font-bold tracking-normal text-brand normal-case">
+                  {rounds[group.category]} rounds
+                </span>
+              )}
             </h2>
+          )}
+
+          {/* Supersets: the block repeats, so say what to repeat and how often
+              rather than leaving it to be worked out from a badge. */}
+          {(rounds[group.category] ?? 1) > 1 && group.exercises.length > 1 && (
+            <p className="mb-3 rounded-xl2 border border-line bg-surface px-4 py-3 text-base">
+              Do {group.exercises.length === 2 ? 'both' : `all ${group.exercises.length}`}{' '}
+              of these in order, then start again from the top &mdash;{' '}
+              <span className="font-semibold">{rounds[group.category]} times through in total.</span>{' '}
+              <span className="text-muted">Tick each one off after its last round.</span>
+            </p>
           )}
 
           <ol className="flex flex-col gap-4">

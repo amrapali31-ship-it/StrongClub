@@ -190,6 +190,7 @@ export const localDb: Database = {
         title: data.title,
         emoji: data.emoji ?? '',
         sections: data.sections ?? [],
+        section_rounds: data.section_rounds ?? {},
         subtitle: data.subtitle ?? '',
         position: data.position ?? nextPosition(siblings),
         created_at: new Date().toISOString(),

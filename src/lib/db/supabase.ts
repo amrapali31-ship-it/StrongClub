@@ -137,6 +137,7 @@ export const supabaseDb: Database = {
           title: data.title,
           emoji: data.emoji ?? '',
           sections: data.sections ?? [],
+          section_rounds: data.section_rounds ?? {},
           subtitle: data.subtitle ?? '',
           position: data.position ?? count ?? 0,
         })
