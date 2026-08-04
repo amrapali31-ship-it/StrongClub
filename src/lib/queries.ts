@@ -125,10 +125,23 @@ export async function nextWeekSlot(): Promise<{ title: string; start_date: strin
   return { title: `Week ${weeks.length + 1}`, start_date: start };
 }
 
-export function estimateMinutes(exercises: Exercise[]): number {
+/**
+ * Roughly how long a workout takes.
+ *
+ * In a repeating section the rounds *are* the sets — an exercise is done once
+ * per round — so the round count replaces the exercise's own set count rather
+ * than multiplying with it. Otherwise a three-round pair of two-set exercises
+ * would be quoted at six sets each, which nobody means by a superset.
+ */
+export function estimateMinutes(
+  exercises: Exercise[],
+  rounds: Record<string, number> = {},
+): number {
   const seconds = exercises.reduce((total, e) => {
     const work = e.mode === 'time' ? (e.duration_seconds ?? 30) : (e.reps ?? 10) * 4;
-    return total + e.sets * (work + e.rest_seconds);
+    const repeats = rounds[e.category ?? ''] ?? 1;
+    const times = repeats > 1 ? repeats : e.sets;
+    return total + times * (work + e.rest_seconds);
   }, 0);
   return Math.max(1, Math.round(seconds / 60));
 }
@@ -155,7 +168,7 @@ export async function getWeekBoard(weekId: string, profileId?: string): Promise<
         doneExerciseIds,
         fraction,
         status: fraction === 0 ? 'not-started' : fraction < 1 ? 'in-progress' : 'done',
-        estimatedMinutes: estimateMinutes(exercises),
+        estimatedMinutes: estimateMinutes(exercises, workout.section_rounds ?? {}),
       } satisfies WorkoutProgress;
     }),
   );
@@ -180,6 +193,6 @@ export async function getWorkoutProgress(
     doneExerciseIds,
     fraction,
     status: fraction === 0 ? 'not-started' : fraction < 1 ? 'in-progress' : 'done',
-    estimatedMinutes: estimateMinutes(exercises),
+    estimatedMinutes: estimateMinutes(exercises, workout.section_rounds ?? {}),
   };
 }

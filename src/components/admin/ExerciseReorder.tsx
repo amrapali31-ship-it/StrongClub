@@ -24,7 +24,7 @@ import { useState, useTransition } from 'react';
 
 import { DeleteExerciseButton } from '@/components/admin/DeleteExerciseButton';
 import { MediaThumb } from '@/components/MediaFrame';
-import { setsLabel } from '@/lib/media';
+import { setsLabel, targetLabel } from '@/lib/media';
 import { placeRow, readOrderFromRows } from '@/lib/ordering';
 import type { Exercise } from '@/lib/types';
 
@@ -48,6 +48,8 @@ interface ExerciseRow {
   kind: 'exercise';
   id: string;
   exercise: Exercise;
+  /** Its section repeats, so its own set count isn't what gets done. */
+  repeating: boolean;
 }
 
 type Row = HeadingRow | ExerciseRow;
@@ -76,6 +78,7 @@ interface Props {
 function toRows(
   groups: Props['groups'],
   showHeadings: boolean,
+  rounds: Record<string, number>,
 ): Row[] {
   const rows: Row[] = [];
   // Only named sections can be moved, so the "Also" bucket doesn't count
@@ -95,7 +98,12 @@ function toRows(
       });
     }
     for (const exercise of group.exercises) {
-      rows.push({ kind: 'exercise', id: exercise.id, exercise });
+      rows.push({
+        kind: 'exercise',
+        id: exercise.id,
+        exercise,
+        repeating: (rounds[group.category] ?? 1) > 1,
+      });
     }
   }
   return rows;
@@ -116,7 +124,7 @@ export function ExerciseReorder({
   swap,
   setRounds,
 }: Props) {
-  const [rows, setRows] = useState<Row[]>(() => toRows(groups, showHeadings));
+  const [rows, setRows] = useState<Row[]>(() => toRows(groups, showHeadings, rounds));
   const [, startTransition] = useTransition();
 
   // The server list is the source of truth; local state only holds the
@@ -130,13 +138,13 @@ export function ExerciseReorder({
       (g) =>
         `${g.category}:${g.exercises
           .map((e) => `${e.id}~${e.name}~${e.media_type}~${setsLabel(e)}~${e.equipment}`)
-          .join(',')}`,
+          .join(',')}~${rounds[g.category] ?? 1}`,
     )
     .join('|');
   const [seenSignature, setSeenSignature] = useState(signature);
   if (signature !== seenSignature) {
     setSeenSignature(signature);
-    setRows(toRows(groups, showHeadings));
+    setRows(toRows(groups, showHeadings, rounds));
   }
 
   // Mouse and touch are listed separately rather than using PointerSensor:
@@ -211,6 +219,7 @@ export function ExerciseReorder({
               <SortableExercise
                 key={row.id}
                 exercise={row.exercise}
+                repeating={row.repeating}
                 library={library}
                 remove={remove}
                 swap={swap}
@@ -257,11 +266,13 @@ function HeadingItem({
 
 function SortableExercise({
   exercise,
+  repeating,
   library,
   remove,
   swap,
 }: {
   exercise: Exercise;
+  repeating: boolean;
   library: Props['library'];
   remove: (formData: FormData) => Promise<void>;
   swap: (formData: FormData) => Promise<void>;
@@ -301,7 +312,7 @@ function SortableExercise({
         <Link href={`/admin/exercise/${exercise.id}`} className="block py-1">
           <p className="font-bold">{exercise.name}</p>
           <p className="text-sm text-muted">
-            {setsLabel(exercise)}
+            {repeating ? `${targetLabel(exercise)} each round` : setsLabel(exercise)}
             {exercise.equipment && <> &middot; {exercise.equipment}</>}
             {exercise.media_type === 'none' && (
               <span className="ml-2 whitespace-nowrap text-brand">no video</span>

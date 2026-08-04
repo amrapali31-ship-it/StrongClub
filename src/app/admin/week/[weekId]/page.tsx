@@ -26,7 +26,11 @@ export default async function AdminWeek({ params }: { params: Promise<{ weekId: 
   const withCounts = await Promise.all(
     workouts.map(async (workout) => {
       const exercises = await db.listExercises(workout.id);
-      return { workout, count: exercises.length, minutes: estimateMinutes(exercises) };
+      return {
+        workout,
+        count: exercises.length,
+        minutes: estimateMinutes(exercises, workout.section_rounds ?? {}),
+      };
     }),
   );
 

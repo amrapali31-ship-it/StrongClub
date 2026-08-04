@@ -9,7 +9,7 @@ import { ParentShell } from '@/components/ParentShell';
 import { WorkoutSession } from '@/components/WorkoutSession';
 import { getActiveProfileId } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { setsLabel } from '@/lib/media';
+import { setsLabel, targetLabel } from '@/lib/media';
 import { getWorkoutProgress, groupExercises, shouldShowGroupHeadings } from '@/lib/queries';
 
 export const dynamic = 'force-dynamic';
@@ -125,6 +125,13 @@ export default async function WorkoutOverview({
                 {group.exercises[0].name} before starting {group.exercises[1].name}.
               </p>
 
+              {Math.max(...group.exercises.map((e) => e.rest_seconds)) > 0 && (
+                <p className="mt-2 text-base text-muted">
+                  Rest about {Math.max(...group.exercises.map((e) => e.rest_seconds))} seconds
+                  between rounds, not between exercises.
+                </p>
+              )}
+
               <p className="mt-2 text-sm text-muted">Tick each one off after its last round.</p>
             </div>
           )}
@@ -133,6 +140,9 @@ export default async function WorkoutOverview({
             {group.exercises.map((exercise) => {
               const done = doneExerciseIds.has(exercise.id);
               const i = running.indexOf(exercise);
+              // In a repeating section the rounds are the sets, so the card
+              // shows one round's work and the heading says how many rounds.
+              const repeating = (rounds[group.category] ?? 1) > 1;
 
               return (
                 <li key={exercise.id} className={`card p-4 ${done ? 'bg-success-tint/40' : ''}`}>
@@ -144,7 +154,7 @@ export default async function WorkoutOverview({
                     <div className="min-w-0 flex-1">
                       <h2 className="text-2xl font-bold">{exercise.name}</h2>
                       <p className="mt-0.5 text-lg font-semibold text-brand">
-                        {setsLabel(exercise)}
+                        {repeating ? `${targetLabel(exercise)} each round` : setsLabel(exercise)}
                       </p>
                       {exercise.equipment && (
                         <p className="mt-1 text-base text-muted">{exercise.equipment}</p>
@@ -189,8 +199,10 @@ export default async function WorkoutOverview({
                     )}
 
                     {/* The sets/reps target is already under the title — this line
-                      only adds the rest guidance, so it isn't repeated. */}
-                    {exercise.sets > 1 && exercise.rest_seconds > 0 && (
+                      only adds the rest guidance, so it isn't repeated. In a
+                      repeating section the rest is between rounds, and is said
+                      once at the top instead of on every card. */}
+                    {!repeating && exercise.sets > 1 && exercise.rest_seconds > 0 && (
                       <p className="mt-3 text-base text-muted">
                         Rest about {exercise.rest_seconds} seconds between sets.
                       </p>
