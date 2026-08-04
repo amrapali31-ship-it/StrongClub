@@ -200,6 +200,8 @@ export async function saveImportedWeek(formData: FormData): Promise<void> {
     published: false,
   });
 
+  const library = formData.get('keepInLibrary') === 'on' ? await LibraryCollector.open() : undefined;
+
   for (const [workoutIndex, draftWorkout] of draft.workouts.entries()) {
     const workout = await db.createWorkout({
       week_id: week.id,
@@ -209,9 +211,11 @@ export async function saveImportedWeek(formData: FormData): Promise<void> {
     });
 
     for (const [index, draftExercise] of draftWorkout.exercises.entries()) {
-      await exerciseFromDraft(draftExercise, workout.id, index);
+      await exerciseFromDraft(draftExercise, workout.id, index, library);
     }
   }
+
+  if (library?.count) revalidatePath('/admin/library');
 
   revalidatePath('/admin');
   redirect(`/admin/week/${week.id}`);
@@ -231,12 +235,12 @@ async function exerciseFromDraft(
   draft: DraftExercise,
   workoutId: string,
   position: number,
+  library?: LibraryCollector,
 ): Promise<void> {
   const mode: ExerciseMode = draft.mode === 'time' ? 'time' : 'reps';
   const source = draft.library_id ? await db.getLibraryExercise(draft.library_id) : null;
 
-  await db.createExercise({
-    workout_id: workoutId,
+  const shape = {
     name: source?.name || draft.name || 'Untitled exercise',
     category: source?.category || draft.category || '',
     equipment: source?.equipment || draft.equipment || '',
@@ -246,12 +250,68 @@ async function exerciseFromDraft(
     reps: mode === 'reps' ? Math.max(1, Math.round(draft.reps ?? 10)) : null,
     duration_seconds: mode === 'time' ? Math.max(1, Math.round(draft.duration_seconds ?? 30)) : null,
     rest_seconds: Math.max(0, Math.round(draft.rest_seconds ?? 30)),
+  };
+
+  await db.createExercise({
+    workout_id: workoutId,
+    ...shape,
     // A matched entry brings its video. Otherwise nothing: models invent
     // plausible-looking links that go nowhere.
     media_type: source?.media_type ?? 'none',
     media_url: source?.media_url ?? '',
     position,
   });
+
+  // Only movements the library didn't already have. A matched one is already
+  // there by definition, and re-saving it would overwrite the coach's own
+  // wording with the model's.
+  if (library && !source) await library.keep(shape);
+}
+
+/**
+ * Files away the movements an import introduced, so the library grows as weeks
+ * are imported rather than staying whatever it was seeded with.
+ *
+ * Names are tracked across the whole import, not just against the database:
+ * one plan can name the same exercise in three different workouts, and each
+ * would otherwise be filed separately.
+ */
+class LibraryCollector {
+  private readonly seen: Set<string>;
+  private saved = 0;
+
+  private constructor(names: string[]) {
+    this.seen = new Set(names.map((name) => name.trim().toLowerCase()));
+  }
+
+  static async open(): Promise<LibraryCollector> {
+    return new LibraryCollector((await db.listLibrary()).map((entry) => entry.name));
+  }
+
+  async keep(shape: {
+    name: string;
+    category: string;
+    equipment: string;
+    instructions: string;
+    mode: ExerciseMode;
+    sets: number;
+    reps: number | null;
+    duration_seconds: number | null;
+    rest_seconds: number;
+  }): Promise<void> {
+    const key = shape.name.trim().toLowerCase();
+    if (!key || key === 'untitled exercise' || this.seen.has(key)) return;
+
+    this.seen.add(key);
+    this.saved += 1;
+    // Imports never carry media, so a fresh entry starts without one and gets
+    // a video attached by hand later.
+    await db.createLibraryExercise({ ...shape, media_type: 'none', media_url: '' });
+  }
+
+  get count(): number {
+    return this.saved;
+  }
 }
 
 /**
@@ -285,9 +345,13 @@ export async function saveImportedWorkout(formData: FormData): Promise<void> {
     position: siblings.length,
   });
 
+  const library = formData.get('keepInLibrary') === 'on' ? await LibraryCollector.open() : undefined;
+
   for (const [index, draftExercise] of draft.exercises.entries()) {
-    await exerciseFromDraft(draftExercise, workout.id, index);
+    await exerciseFromDraft(draftExercise, workout.id, index, library);
   }
+
+  if (library?.count) revalidatePath('/admin/library');
 
   revalidatePath(`/admin/week/${weekId}`);
   revalidatePath('/home');

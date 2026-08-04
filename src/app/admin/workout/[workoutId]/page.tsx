@@ -55,6 +55,11 @@ export default async function AdminWorkout({
     hasMedia: entry.media_type !== 'none',
   }));
 
+  // Every category the library actually uses, not just the built-in ones —
+  // an imported exercise can introduce a category of its own, and filtering to
+  // the built-in list would hide it from this picker entirely.
+  const libraryCategories = [...new Set(library.map((e) => e.category))].sort();
+
   // Offer whatever's already in use anywhere, plus the built-in suggestions.
   const sectionSuggestions = [
     ...new Set([
@@ -171,11 +176,11 @@ export default async function AdminWorkout({
                 <option value="" disabled>
                   Pick an exercise…
                 </option>
-                {EXERCISE_CATEGORIES.map((category) => {
+                {libraryCategories.map((category) => {
                   const items = library.filter((e) => e.category === category);
                   if (items.length === 0) return null;
                   return (
-                    <optgroup key={category} label={category}>
+                    <optgroup key={category} label={category || 'Other'}>
                       {items.map((exercise) => (
                         <option key={exercise.id} value={exercise.id}>
                           {exercise.name}

@@ -195,6 +195,36 @@ function applyChoices<T extends DraftWeek | DraftWorkout>(draft: T, rejected: Se
   return { ...draft, exercises: fix(draft.exercises, '0:') };
 }
 
+
+/**
+ * Offers to file anything new into the library. Ticked by default, because a
+ * plan you liked enough to import is usually one you'll draw on again — but a
+ * one-off week shouldn't be forced to leave residue behind.
+ */
+function KeepInLibrary({ newCount }: { newCount: number }) {
+  if (newCount === 0) return null;
+
+  return (
+    <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-xl2 border-2 border-line bg-surface px-4 py-3">
+      <input
+        type="checkbox"
+        name="keepInLibrary"
+        defaultChecked
+        className="mt-0.5 h-5 w-5 shrink-0 accent-brand"
+      />
+      <span className="text-base">
+        <span className="font-semibold">
+          Save {newCount === 1 ? 'the new exercise' : `all ${newCount} new exercises`} to my library
+        </span>
+        <span className="block text-sm text-muted">
+          So you can reuse {newCount === 1 ? 'it' : 'them'} later and attach a video once. Anything
+          already in your library is left alone.
+        </span>
+      </span>
+    </label>
+  );
+}
+
 function ExerciseLines({
   exercises,
   prefix,
@@ -333,6 +363,8 @@ function ReviewWorkout({
         />
       </div>
 
+      <KeepInLibrary newCount={draft.exercises.length - matched} />
+
       <div className="mt-8 flex flex-col gap-3 sm:flex-row-reverse">
         <button type="submit" className="btn-primary flex-1">
           Add to {target.title}
@@ -397,6 +429,8 @@ function ReviewWeek({ draft, onDiscard }: { draft: DraftWeek; onDiscard: () => v
           </li>
         ))}
       </ul>
+
+      <KeepInLibrary newCount={total - matched} />
 
       <div className="mt-8 flex flex-col gap-3 sm:flex-row-reverse">
         <button type="submit" className="btn-primary flex-1">
