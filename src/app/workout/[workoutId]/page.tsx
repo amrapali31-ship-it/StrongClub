@@ -104,15 +104,29 @@ export default async function WorkoutOverview({
             </h2>
           )}
 
-          {/* Supersets: the block repeats, so say what to repeat and how often
-              rather than leaving it to be worked out from a badge. */}
+          {/* Supersets: the thing people get wrong is doing all their sets of
+              one exercise before starting the next, so say the order out loud
+              with the real names rather than describing it in the abstract. */}
           {(rounds[group.category] ?? 1) > 1 && group.exercises.length > 1 && (
-            <p className="mb-3 rounded-xl2 border border-line bg-surface px-4 py-3 text-base">
-              Do {group.exercises.length === 2 ? 'both' : `all ${group.exercises.length}`}{' '}
-              of these in order, then start again from the top &mdash;{' '}
-              <span className="font-semibold">{rounds[group.category]} times through in total.</span>{' '}
-              <span className="text-muted">Tick each one off after its last round.</span>
-            </p>
+            <div className="mb-3 rounded-xl2 border border-line bg-surface px-4 py-3">
+              <p className="text-base">
+                {/* Explicit, because a space that only exists at the end of a
+                    JSX line does not survive to the page. */}
+                <span className="font-semibold">Do these back to back.</span>{' '}
+                Work through them in order, then straight back to the top &mdash;{' '}
+                <span className="font-semibold">
+                  {rounds[group.category]} times through in total.
+                </span>
+              </p>
+
+              <p className="mt-2 text-base text-muted">
+                So: {group.exercises.map((e) => e.name).join(', then ')}, then back to{' '}
+                {group.exercises[0].name} again. Not all your sets of{' '}
+                {group.exercises[0].name} before starting {group.exercises[1].name}.
+              </p>
+
+              <p className="mt-2 text-sm text-muted">Tick each one off after its last round.</p>
+            </div>
           )}
 
           <ol className="flex flex-col gap-4">
