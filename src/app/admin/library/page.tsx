@@ -2,7 +2,7 @@ import { BackLink } from '@/components/BackLink';
 import { addLibraryExercise } from '@/app/admin/actions';
 import { LibraryList } from '@/components/admin/LibraryList';
 import { db } from '@/lib/db';
-import { EXERCISE_CATEGORIES } from '@/lib/types';
+import { LIBRARY_CATEGORIES } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,11 +10,15 @@ export default async function AdminLibrary() {
   const library = await db.listLibrary();
   const withVideo = library.filter((e) => e.media_type !== 'none').length;
 
-  // Sections are free text, so list the suggested ones in their intended order
-  // and append whatever else the coach has invented.
+  // The built-in categories in their intended order, plus anything already
+  // filed elsewhere — an import can introduce a category, and an entry
+  // shouldn't become unreachable because its drawer isn't on the standard list.
   const used = [...new Set(library.map((e) => e.category))];
-  const suggested = EXERCISE_CATEGORIES.filter((c) => used.includes(c));
+  const suggested = LIBRARY_CATEGORIES.filter((c) => used.includes(c));
   const custom = used.filter((c) => c && !suggested.includes(c as never)).sort();
+  const categoryChoices = [
+    ...new Set([...LIBRARY_CATEGORIES, ...used.filter(Boolean)]),
+  ] as string[];
   const sections = [...suggested, ...custom, ...(used.includes('') ? [''] : [])].map(
     (category) => ({ category, items: library.filter((e) => e.category === category) }),
   );
@@ -49,21 +53,15 @@ export default async function AdminLibrary() {
           <label htmlFor="category" className="label">
             Category
           </label>
-          <input
-            id="category"
-            name="category"
-            defaultValue={EXERCISE_CATEGORIES[1]}
-            list="library-sections"
-            className="field"
-          />
-          <datalist id="library-sections">
-            {[...new Set([...EXERCISE_CATEGORIES, ...library.map((e) => e.category)])]
-              .filter(Boolean)
-              .sort()
-              .map((category) => (
-                <option key={category} value={category} />
-              ))}
-          </datalist>
+          {/* A fixed list, unlike a workout's sections: this is how the library
+              is filed, and it only helps you find things if it stays small. */}
+          <select id="category" name="category" defaultValue={LIBRARY_CATEGORIES[1]} className="field">
+            {categoryChoices.map((category) => (
+              <option key={category} value={category}>
+                {category || 'No category'}
+              </option>
+            ))}
+          </select>
         </div>
         <button type="submit" className="btn-primary shrink-0 text-base">
           Add

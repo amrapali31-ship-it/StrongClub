@@ -22,8 +22,7 @@ import { EmojiField } from '@/components/admin/EmojiField';
 import { ExercisePicker } from '@/components/admin/ExercisePicker';
 import { ExerciseReorder } from '@/components/admin/ExerciseReorder';
 import { db } from '@/lib/db';
-import { groupExercises, shouldShowGroupHeadings } from '@/lib/queries';
-import { EXERCISE_CATEGORIES } from '@/lib/types';
+import { groupExercises, listUsedSections, shouldShowGroupHeadings } from '@/lib/queries';
 
 export const dynamic = 'force-dynamic';
 
@@ -57,16 +56,9 @@ export default async function AdminWorkout({
     hasMedia: entry.media_type !== 'none',
   }));
 
-  // Offer whatever's already in use anywhere, plus the built-in suggestions.
-  const sectionSuggestions = [
-    ...new Set([
-      ...EXERCISE_CATEGORIES,
-      ...library.map((e) => e.category),
-      ...exercises.map((e) => e.category),
-    ]),
-  ]
-    .filter(Boolean)
-    .sort();
+  // Sections you've used before, not the library's categories: a section names
+  // part of a session and can be called anything at all.
+  const sectionSuggestions = await listUsedSections();
 
   return (
     <>
@@ -147,7 +139,7 @@ export default async function AdminWorkout({
             <input
               id="section-name"
               name="name"
-              placeholder="e.g. Finisher"
+              placeholder="e.g. Finisher, Baja Blast, Round one"
               list="section-suggestions"
               className="field"
             />
@@ -161,6 +153,11 @@ export default async function AdminWorkout({
             Add
           </button>
         </form>
+
+        <p className="mt-2 text-sm text-muted">
+          A section names a part of this workout and can be called anything. It&rsquo;s not the
+          same as a library category, which is just how a movement is filed.
+        </p>
 
         {library.length > 0 && (
           <form action={addExerciseFromLibrary} className="card mt-4 p-4">

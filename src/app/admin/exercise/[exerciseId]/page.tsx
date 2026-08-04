@@ -5,7 +5,8 @@ import { removeExercise, saveExercise, saveExerciseToLibrary } from '@/app/admin
 import { MediaPicker } from '@/components/admin/MediaPicker';
 import { ModeFields } from '@/components/admin/ModeFields';
 import { db } from '@/lib/db';
-import { EQUIPMENT_OPTIONS, EXERCISE_CATEGORIES } from '@/lib/types';
+import { listUsedSections } from '@/lib/queries';
+import { EQUIPMENT_OPTIONS, LIBRARY_CATEGORIES } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,12 +20,9 @@ export default async function AdminExercise({
   const exercise = await db.getExercise(exerciseId);
   if (!exercise) notFound();
 
-  const library = await db.listLibrary();
-  const sectionSuggestions = [
-    ...new Set([...EXERCISE_CATEGORIES, ...library.map((e) => e.category)]),
-  ]
-    .filter(Boolean)
-    .sort();
+  // Sections you've used before, not library categories: they answer different
+  // questions — which part of this session, versus what kind of movement.
+  const [library, sectionSuggestions] = await Promise.all([db.listLibrary(), listUsedSections()]);
 
   // Whatever's already in use, so the second dumbbell exercise offers the same
   // wording as the first rather than inviting a near-miss.
@@ -58,7 +56,7 @@ export default async function AdminExercise({
               name="category"
               defaultValue={exercise.category ?? ''}
               list="section-suggestions"
-              placeholder="e.g. Strength"
+              placeholder="e.g. Finisher"
               className="field"
             />
             <datalist id="section-suggestions">
@@ -70,8 +68,9 @@ export default async function AdminExercise({
         </div>
 
         <p className="mt-2 text-sm text-muted">
-          Exercises sharing a section are grouped together under a heading when your parents open
-          the workout. Type anything &mdash; leave it blank for no section.
+          Exercises sharing a section are grouped under a heading when your parents open the
+          workout. Call it anything you like &mdash; it names a part of this session, not a kind of
+          movement. Leave it blank for no section.
         </p>
 
 
@@ -138,13 +137,24 @@ export default async function AdminExercise({
             edits to update the stored version.
           </p>
         </div>
-        <input
+        {/* Filing it, so this is a library category rather than a section —
+            the two look alike and mean different things. */}
+        <select
           name="category"
-          defaultValue={exercise.category || EXERCISE_CATEGORIES[0]}
-          list="section-suggestions"
-          aria-label="Library section"
-          className="field sm:w-40"
-        />
+          defaultValue={
+            (LIBRARY_CATEGORIES as readonly string[]).includes(exercise.category)
+              ? exercise.category
+              : LIBRARY_CATEGORIES[0]
+          }
+          aria-label="Library category"
+          className="field sm:w-44"
+        >
+          {LIBRARY_CATEGORIES.map((category) => (
+            <option key={category} value={category}>
+              {category}
+            </option>
+          ))}
+        </select>
         <button type="submit" className="btn-secondary shrink-0 text-base">
           Save to library
         </button>

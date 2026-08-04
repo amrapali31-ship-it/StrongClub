@@ -10,7 +10,7 @@ import { detectMediaType } from '@/lib/media';
 import { closesWorkout, groupExercises, normaliseCategory, opensWorkout } from '@/lib/ordering';
 import { nextWeekSlot } from '@/lib/queries';
 import {
-  EXERCISE_CATEGORIES,
+  LIBRARY_CATEGORIES,
   type Exercise,
   type ExerciseMode,
   type MediaType,
@@ -476,7 +476,7 @@ export async function addLibraryExercise(formData: FormData): Promise<void> {
 
   const entry = await db.createLibraryExercise({
     name,
-    category: str(formData, 'category') || EXERCISE_CATEGORIES[0],
+    category: str(formData, 'category') || LIBRARY_CATEGORIES[0],
   });
   redirect(`/admin/library/${entry.id}`);
 }
@@ -496,7 +496,7 @@ export async function saveLibraryExercise(formData: FormData): Promise<void> {
 
   await db.updateLibraryExercise(id, {
     name: str(formData, 'name') || 'Untitled exercise',
-    category: str(formData, 'category') || EXERCISE_CATEGORIES[0],
+    category: str(formData, 'category') || LIBRARY_CATEGORIES[0],
     equipment: str(formData, 'equipment'),
     instructions: str(formData, 'instructions'),
     mode,
@@ -602,7 +602,7 @@ export async function saveExerciseToLibrary(formData: FormData): Promise<void> {
 
   const payload = {
     name: exercise.name,
-    category: str(formData, 'category') || exercise.category || EXERCISE_CATEGORIES[0],
+    category: str(formData, 'category') || exercise.category || LIBRARY_CATEGORIES[0],
     equipment: exercise.equipment ?? '',
     instructions: exercise.instructions,
     mode: exercise.mode,

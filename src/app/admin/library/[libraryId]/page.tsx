@@ -5,7 +5,7 @@ import { removeLibraryExercise, saveLibraryExercise } from '@/app/admin/actions'
 import { MediaPicker } from '@/components/admin/MediaPicker';
 import { ModeFields } from '@/components/admin/ModeFields';
 import { db } from '@/lib/db';
-import { EQUIPMENT_OPTIONS, EXERCISE_CATEGORIES } from '@/lib/types';
+import { EQUIPMENT_OPTIONS, LIBRARY_CATEGORIES } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,9 +20,9 @@ export default async function AdminLibraryExercise({
   if (!exercise) notFound();
 
   const library = await db.listLibrary();
-  const sectionSuggestions = [...new Set([...EXERCISE_CATEGORIES, ...library.map((e) => e.category)])]
-    .filter(Boolean)
-    .sort();
+  const categoryChoices = [
+    ...new Set([...LIBRARY_CATEGORIES, ...library.map((e) => e.category)]),
+  ] as string[];
   const equipmentSuggestions = [
     ...new Set([...EQUIPMENT_OPTIONS, ...library.map((e) => e.equipment ?? '')]),
   ]
@@ -47,19 +47,20 @@ export default async function AdminLibraryExercise({
             <label htmlFor="category" className="label">
               Category
             </label>
-            <input
+            {/* Fixed choices: the library is a filing system, and it only
+                works as one while the drawers stay few. */}
+            <select
               id="category"
               name="category"
               defaultValue={exercise.category}
-              list="section-suggestions"
-              placeholder="e.g. Strength"
               className="field"
-            />
-            <datalist id="section-suggestions">
-              {sectionSuggestions.map((category) => (
-                <option key={category} value={category} />
+            >
+              {categoryChoices.map((category) => (
+                <option key={category} value={category}>
+                  {category || 'No category'}
+                </option>
               ))}
-            </datalist>
+            </select>
           </div>
         </div>
 

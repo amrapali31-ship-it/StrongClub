@@ -50,8 +50,9 @@ export interface Exercise {
   workout_id: string;
   name: string;
   /**
-   * Copied from the library entry this came from. Drives the sub-sections on
-   * the workout page. Empty for one-offs typed straight in.
+   * The section of the workout this sits in — free text, named by the coach.
+   * Starts as the library entry's category when it came from there, and is
+   * renamed freely from then on. Empty for one-offs typed straight in.
    */
   category: string;
   /**
@@ -74,10 +75,17 @@ export interface Exercise {
 }
 
 /**
- * Suggested section names, offered in the pickers. Sections are free text —
- * type anything you like — so this is a starting point, not a closed set.
+ * How the library is filed. Deliberately a short, closed-ish list: it's a
+ * filing system for finding a movement again, and it stops being one if every
+ * entry invents its own drawer.
+ *
+ * A workout *section* is a different idea and is free text — it names a part
+ * of one session ("Warm up", "Finisher", "Baja Blast") rather than what kind
+ * of movement something is. The two are stored in the same column because a
+ * library exercise arrives in a workout already filed, and that filing makes a
+ * sensible starting section — but only a starting one.
  */
-export const EXERCISE_CATEGORIES = [
+export const LIBRARY_CATEGORIES = [
   'Warm-up',
   'Legs',
   'Upper body',
@@ -88,7 +96,7 @@ export const EXERCISE_CATEGORIES = [
   'Cool-down',
 ] as const;
 
-export type ExerciseCategory = (typeof EXERCISE_CATEGORIES)[number];
+export type LibraryCategory = (typeof LIBRARY_CATEGORIES)[number];
 
 /**
  * Suggested kit, offered in the pickers. Free text like the sections, so a
@@ -115,6 +123,7 @@ export const EQUIPMENT_OPTIONS = [
 export interface LibraryExercise {
   id: string;
   name: string;
+  /** How it's filed in the library. See LIBRARY_CATEGORIES. */
   category: string;
   equipment: string;
   instructions: string;

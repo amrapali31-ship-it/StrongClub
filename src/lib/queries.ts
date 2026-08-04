@@ -31,6 +31,24 @@ export function shouldShowGroupHeadings(groups: ExerciseGroup[]): boolean {
   return groups.length > 1;
 }
 
+/**
+ * Every section name in use across all workouts, for offering as you type.
+ *
+ * Deliberately not the library's categories: a section names a part of one
+ * session and can be called anything, so the useful suggestions are the ones
+ * this coach has actually used, not a taxonomy for filing movements.
+ */
+export async function listUsedSections(): Promise<string[]> {
+  const [exercises, weeks] = await Promise.all([db.listAllExercises(), db.listWeeks()]);
+  const declared = (
+    await Promise.all(weeks.map((week) => db.listWorkouts(week.id)))
+  ).flatMap((workouts) => workouts.flatMap((workout) => workout.sections ?? []));
+
+  return [...new Set([...exercises.map((e) => e.category ?? ''), ...declared])]
+    .filter(Boolean)
+    .sort();
+}
+
 /** Monday of the week containing `date`, as yyyy-mm-dd. */
 export function mondayOf(date: Date): string {
   const copy = new Date(date);
