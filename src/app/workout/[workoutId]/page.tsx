@@ -119,18 +119,19 @@ export default async function WorkoutOverview({
                 </span>
               </p>
 
-              <p className="mt-2 text-base text-muted">
-                So: {group.exercises.map((e) => e.name).join(', then ')}, then back to{' '}
-                {group.exercises[0].name} again. Not all your sets of{' '}
-                {group.exercises[0].name} before starting {group.exercises[1].name}.
-              </p>
-
-              {Math.max(...group.exercises.map((e) => e.rest_seconds)) > 0 && (
-                <p className="mt-2 text-base text-muted">
-                  Rest about {Math.max(...group.exercises.map((e) => e.rest_seconds))} seconds
-                  between rounds, not between exercises.
+              {/* Spelled out only for whoever wants it. `details` rather than a
+                  hover tooltip: there is no hover on a phone, and this is read
+                  on a phone. */}
+              <details className="mt-2 text-base text-muted">
+                <summary className="cursor-pointer list-none font-semibold text-brand">
+                  What does that look like?
+                </summary>
+                <p className="mt-2">
+                  {group.exercises.map((e) => e.name).join(', then ')}, then back to{' '}
+                  {group.exercises[0].name} again &mdash; not everything you&rsquo;re doing of{' '}
+                  {group.exercises[0].name} before starting {group.exercises[1].name}.
                 </p>
-              )}
+              </details>
 
               <p className="mt-2 text-sm text-muted">Tick each one off after its last round.</p>
             </div>
@@ -198,15 +199,6 @@ export default async function WorkoutOverview({
                       <InlineTimer seconds={exercise.duration_seconds ?? 30} />
                     )}
 
-                    {/* The sets/reps target is already under the title — this line
-                      only adds the rest guidance, so it isn't repeated. In a
-                      repeating section the rest is between rounds, and is said
-                      once at the top instead of on every card. */}
-                    {!repeating && exercise.sets > 1 && exercise.rest_seconds > 0 && (
-                      <p className="mt-3 text-base text-muted">
-                        Rest about {exercise.rest_seconds} seconds between sets.
-                      </p>
-                    )}
                   </div>
                 </li>
               );
