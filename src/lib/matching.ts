@@ -64,6 +64,52 @@ export function words(name: string): string[] {
     .filter((word) => !NOISE.has(word));
 }
 
+/**
+ * Whether two words are the same word, allowing for a slip of the thumb.
+ *
+ * One edit for an ordinary word, two for a long one — enough for "angle" and
+ * "angel", or the "dumbell" that is already sitting in the library, without
+ * letting genuinely different short words collapse into each other.
+ */
+function sameWord(a: string, b: string): boolean {
+  if (a === b) return true;
+
+  const longest = Math.max(a.length, b.length);
+  if (longest < 4) return false;
+  const budget = longest >= 8 ? 2 : 1;
+  if (Math.abs(a.length - b.length) > budget) return false;
+
+  // Damerau-Levenshtein rather than plain edit distance, because swapping two
+  // letters is the typo people actually make — "angle" for "angel" — and
+  // plain Levenshtein charges two edits for it, putting it out of budget.
+  let twoBack: number[] = [];
+  let previous = Array.from({ length: b.length + 1 }, (_, i) => i);
+
+  for (let i = 1; i <= a.length; i += 1) {
+    const row = [i];
+    let best = i;
+
+    for (let j = 1; j <= b.length; j += 1) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      let value = Math.min(row[j - 1] + 1, previous[j] + 1, previous[j - 1] + cost);
+
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
+        value = Math.min(value, twoBack[j - 2] + 1);
+      }
+
+      row[j] = value;
+      best = Math.min(best, value);
+    }
+
+    // Nothing later can bring the row back under budget.
+    if (best > budget) return false;
+    twoBack = previous;
+    previous = row;
+  }
+
+  return previous[b.length] <= budget;
+}
+
 export interface Candidate {
   id: string;
   name: string;
@@ -84,7 +130,14 @@ export function similarity(a: string, b: string): number {
   if (left.size === 0 || right.size === 0) return 0;
 
   let shared = 0;
-  for (const word of left) if (right.has(word)) shared += 1;
+  for (const word of left) {
+    for (const other of right) {
+      if (sameWord(word, other)) {
+        shared += 1;
+        break;
+      }
+    }
+  }
   if (shared === 0) return 0;
 
   const smaller = Math.min(left.size, right.size);
@@ -128,4 +181,39 @@ export function suggestMatch(
   }
 
   return bestScore >= threshold ? best : null;
+}
+
+export interface Searchable {
+  name: string;
+  category?: string;
+  equipment?: string;
+}
+
+/**
+ * Filters a list as someone types.
+ *
+ * Every word typed has to appear somewhere in the entry, in any order, so
+ * "curl bicep" and "wall ang" both land. Only if nothing matches at all does
+ * it fall back to the fuzzy comparison, which catches a typo without letting
+ * near-misses clutter an otherwise exact result.
+ */
+export function searchExercises<T extends Searchable>(query: string, items: T[]): T[] {
+  const typed = query.trim().toLowerCase();
+  if (!typed) return items;
+
+  const tokens = typed.split(/\s+/).filter(Boolean);
+  const haystack = (item: T) =>
+    `${item.name} ${item.category ?? ''} ${item.equipment ?? ''}`.toLowerCase();
+
+  const direct = items.filter((item) => {
+    const hay = haystack(item);
+    return tokens.every((token) => hay.includes(token));
+  });
+  if (direct.length > 0) return direct;
+
+  return items
+    .map((item) => ({ item, score: similarity(query, item.name) }))
+    .filter((scored) => scored.score >= 0.45)
+    .sort((a, b) => b.score - a.score)
+    .map((scored) => scored.item);
 }

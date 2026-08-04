@@ -1,9 +1,7 @@
-import Link from 'next/link';
-
+import { BackLink } from '@/components/BackLink';
 import { addLibraryExercise } from '@/app/admin/actions';
-import { MediaThumb } from '@/components/MediaFrame';
+import { LibraryList } from '@/components/admin/LibraryList';
 import { db } from '@/lib/db';
-import { setsLabel } from '@/lib/media';
 import { EXERCISE_CATEGORIES } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -23,9 +21,7 @@ export default async function AdminLibrary() {
 
   return (
     <>
-      <Link href="/admin" className="text-sm font-semibold text-muted hover:text-ink">
-        &larr; All weeks
-      </Link>
+      <BackLink href="/admin" label="All weeks" />
 
       <h1 className="mt-2 text-3xl font-extrabold tracking-tight">Exercise library</h1>
       <p className="mt-1 text-muted">
@@ -83,44 +79,7 @@ export default async function AdminLibrary() {
           </p>
         </div>
       ) : (
-        <div className="mt-8 flex flex-col gap-8">
-          {sections.map(({ category, items }) => (
-            <section key={category || 'other'}>
-              <h2 className="text-lg font-extrabold tracking-tight">
-                {category || 'No section'}{' '}
-                <span className="text-base font-semibold text-muted">({items.length})</span>
-              </h2>
-
-              <ul className="mt-3 flex flex-col gap-2">
-                {items.map((exercise) => (
-                  <li key={exercise.id}>
-                    <Link
-                      href={`/admin/library/${exercise.id}`}
-                      className="card flex items-center gap-3 p-3 transition hover:border-ink/25"
-                    >
-                      <MediaThumb
-                        mediaType={exercise.media_type}
-                        url={exercise.media_url}
-                        name={exercise.name}
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="font-bold">{exercise.name}</p>
-                        <p className="text-sm text-muted">
-                          {setsLabel(exercise)}
-                          {exercise.equipment && <> &middot; {exercise.equipment}</>}
-                          {exercise.media_type === 'none' && (
-                            <span className="ml-2 text-brand">no video</span>
-                          )}
-                        </p>
-                      </div>
-                      <span className="shrink-0 text-sm font-semibold text-brand">Edit</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
-        </div>
+        <LibraryList library={library} sections={sections} />
       )}
     </>
   );

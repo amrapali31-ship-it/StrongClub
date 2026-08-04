@@ -19,6 +19,7 @@ import {
 import { BackLink } from '@/components/BackLink';
 import { ConfirmSubmit } from '@/components/admin/ConfirmSubmit';
 import { EmojiField } from '@/components/admin/EmojiField';
+import { ExercisePicker } from '@/components/admin/ExercisePicker';
 import { ExerciseReorder } from '@/components/admin/ExerciseReorder';
 import { db } from '@/lib/db';
 import { groupExercises, shouldShowGroupHeadings } from '@/lib/queries';
@@ -52,13 +53,9 @@ export default async function AdminWorkout({
     id: entry.id,
     name: entry.name,
     category: entry.category,
+    equipment: entry.equipment,
     hasMedia: entry.media_type !== 'none',
   }));
-
-  // Every category the library actually uses, not just the built-in ones —
-  // an imported exercise can introduce a category of its own, and filtering to
-  // the built-in list would hide it from this picker entirely.
-  const libraryCategories = [...new Set(library.map((e) => e.category))].sort();
 
   // Offer whatever's already in use anywhere, plus the built-in suggestions.
   const sectionSuggestions = [
@@ -166,35 +163,14 @@ export default async function AdminWorkout({
         </form>
 
         {library.length > 0 && (
-          <form action={addExerciseFromLibrary} className="card mt-4 flex items-end gap-3 p-4">
+          <form action={addExerciseFromLibrary} className="card mt-4 p-4">
             <input type="hidden" name="workoutId" value={workout.id} />
-            <div className="min-w-0 flex-1">
-              <label htmlFor="libraryId" className="label">
-                Add from your library
-              </label>
-              <select id="libraryId" name="libraryId" className="field" defaultValue="">
-                <option value="" disabled>
-                  Pick an exercise…
-                </option>
-                {libraryCategories.map((category) => {
-                  const items = library.filter((e) => e.category === category);
-                  if (items.length === 0) return null;
-                  return (
-                    <optgroup key={category} label={category || 'Other'}>
-                      {items.map((exercise) => (
-                        <option key={exercise.id} value={exercise.id}>
-                          {exercise.name}
-                          {exercise.media_type === 'none' ? '' : ' 🎬'}
-                        </option>
-                      ))}
-                    </optgroup>
-                  );
-                })}
-              </select>
-            </div>
-            <button type="submit" className="btn-primary shrink-0 text-base">
-              Add
-            </button>
+            <p className="label">Add from your library</p>
+            <ExercisePicker
+              name="libraryId"
+              items={libraryChoices}
+              label="Search your library"
+            />
           </form>
         )}
 

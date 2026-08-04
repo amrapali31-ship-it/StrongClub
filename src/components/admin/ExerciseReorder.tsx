@@ -23,6 +23,7 @@ import Link from 'next/link';
 import { useState, useTransition } from 'react';
 
 import { DeleteExerciseButton } from '@/components/admin/DeleteExerciseButton';
+import { ExercisePicker } from '@/components/admin/ExercisePicker';
 import { MediaThumb } from '@/components/MediaFrame';
 import { setsLabel, targetLabel } from '@/lib/media';
 import { placeRow, readOrderFromRows } from '@/lib/ordering';
@@ -63,7 +64,7 @@ interface Props {
   /** Section names already in use, offered while renaming. */
   suggestions: string[];
   /** What a row can be swapped for, without leaving this screen. */
-  library: { id: string; name: string; category: string; hasMedia: boolean }[];
+  library: { id: string; name: string; category: string; equipment?: string; hasMedia: boolean }[];
   /** Section name to how many times the block repeats. Absent means once. */
   rounds: Record<string, number>;
   reorder: (formData: FormData) => Promise<void>;
@@ -331,43 +332,15 @@ function SortableExercise({
         )}
 
         {swapping && (
-          <form action={swap} onSubmit={() => setSwapping(false)} className="mt-2 flex gap-2">
+          <form action={swap} onSubmit={() => setSwapping(false)} className="mt-2">
             <input type="hidden" name="exerciseId" value={exercise.id} />
-            <select
+            <ExercisePicker
               name="libraryId"
-              defaultValue=""
-              aria-label={`Replace ${exercise.name} with`}
-              className="field min-w-0 flex-1 py-2 text-sm"
-            >
-              <option value="" disabled>
-                Replace with…
-              </option>
-              {[...new Set(library.map((entry) => entry.category))].sort().map((category) => (
-                <optgroup key={category} label={category || 'Other'}>
-                  {library
-                    .filter((entry) => entry.category === category)
-                    .map((entry) => (
-                      <option key={entry.id} value={entry.id}>
-                        {entry.name}
-                        {entry.hasMedia ? ' 🎬' : ''}
-                      </option>
-                    ))}
-                </optgroup>
-              ))}
-            </select>
-            <button
-              type="submit"
-              className="shrink-0 rounded-lg bg-brand px-3 py-2 text-sm font-bold text-canvas"
-            >
-              Swap
-            </button>
-            <button
-              type="button"
-              onClick={() => setSwapping(false)}
-              className="shrink-0 px-1 text-sm font-semibold text-muted hover:text-ink"
-            >
-              Cancel
-            </button>
+              items={library}
+              label={`Replace ${exercise.name} with`}
+              placeholder={`Replace ${exercise.name} with…`}
+              onCancel={() => setSwapping(false)}
+            />
           </form>
         )}
       </div>
