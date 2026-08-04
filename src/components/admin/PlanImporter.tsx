@@ -197,21 +197,16 @@ function applyChoices<T extends DraftWeek | DraftWorkout>(draft: T, rejected: Se
 
 
 /**
- * Offers to file anything new into the library. Ticked by default, because a
- * plan you liked enough to import is usually one you'll draw on again — but a
- * one-off week shouldn't be forced to leave residue behind.
+ * Offers to file anything new into the library. Left unticked on purpose: the
+ * library is a curated list, and quietly appending to it every time a plan is
+ * imported is how it stops being one.
  */
 function KeepInLibrary({ newCount }: { newCount: number }) {
   if (newCount === 0) return null;
 
   return (
     <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-xl2 border-2 border-line bg-surface px-4 py-3">
-      <input
-        type="checkbox"
-        name="keepInLibrary"
-        defaultChecked
-        className="mt-0.5 h-5 w-5 shrink-0 accent-brand"
-      />
+      <input type="checkbox" name="keepInLibrary" className="mt-0.5 h-5 w-5 shrink-0 accent-brand" />
       <span className="text-base">
         <span className="font-semibold">
           Save {newCount === 1 ? 'the new exercise' : `all ${newCount} new exercises`} to my library
@@ -266,14 +261,15 @@ function ExerciseLines({
                   className="mt-0.5 h-4 w-4 shrink-0 accent-brand"
                 />
                 <span className={matched ? 'text-ink' : 'text-muted'}>
-                  Use{' '}
-                  <span className="font-semibold">{exercise.library_name}</span> from your library
-                  {matched ? ' — its video and wording come with it' : ''}
-                  {!matched && (
-                    <>
-                      {' '}
-                      (adding &ldquo;{exercise.name}&rdquo; as a new one instead)
-                    </>
+                  {exercise.library_suggested && !matched ? 'Did you mean ' : 'Use '}
+                  <span className="font-semibold">{exercise.library_name}</span>
+                  {exercise.library_suggested && !matched ? '?' : ' from your library'}
+                  {matched && ' — its video and wording come with it'}
+                  {!matched && !exercise.library_suggested && (
+                    <> (adding &ldquo;{exercise.name}&rdquo; as a new one instead)</>
+                  )}
+                  {!matched && exercise.library_suggested && (
+                    <> Tick to use it and its video.</>
                   )}
                 </span>
               </label>
@@ -291,9 +287,14 @@ function ExerciseLines({
   );
 }
 
-/** Which library matches the coach has turned off, keyed by position. */
-function useChoices() {
-  const [rejected, setRejected] = useState<Set<string>>(new Set());
+/**
+ * Which library pairings are off, keyed by position.
+ *
+ * A pairing the model made starts on; one guessed from the names afterwards
+ * starts off, so accepting a guess is always a deliberate act.
+ */
+function useChoices(initiallyOff: string[]) {
+  const [rejected, setRejected] = useState<Set<string>>(() => new Set(initiallyOff));
   const toggle = (key: string) =>
     setRejected((current) => {
       const next = new Set(current);
@@ -312,7 +313,9 @@ function ReviewWorkout({
   target: ImportTarget;
   onDiscard: () => void;
 }) {
-  const { rejected, toggle } = useChoices();
+  const { rejected, toggle } = useChoices(
+    draft.exercises.flatMap((e, i) => (e.library_suggested ? [`0:${i}`] : [])),
+  );
   const matched = draft.exercises.filter((e, i) => e.library_id && !rejected.has(`0:${i}`)).length;
 
   return (
@@ -378,7 +381,11 @@ function ReviewWorkout({
 }
 
 function ReviewWeek({ draft, onDiscard }: { draft: DraftWeek; onDiscard: () => void }) {
-  const { rejected, toggle } = useChoices();
+  const { rejected, toggle } = useChoices(
+    draft.workouts.flatMap((workout, w) =>
+      workout.exercises.flatMap((e, i) => (e.library_suggested ? [`${w}:${i}`] : [])),
+    ),
+  );
   const total = draft.workouts.reduce((sum, w) => sum + w.exercises.length, 0);
   const matched = draft.workouts.reduce(
     (sum, workout, w) =>

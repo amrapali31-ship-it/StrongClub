@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 
+import { suggestMatch } from '@/lib/matching';
 import type { ExerciseMode } from '@/lib/types';
 
 export interface DraftExercise {
@@ -12,6 +13,11 @@ export interface DraftExercise {
   /** Resolved from `library_match` before the draft ever reaches the browser. */
   library_id?: string;
   library_name?: string;
+  /**
+   * True when the pairing came from comparing names afterwards rather than
+   * from the model. Offered unticked, because it's a guess.
+   */
+  library_suggested?: boolean;
   /** Section heading, e.g. "Warm-up" or "Legs". Empty when the source has none. */
   category: string;
   equipment: string;
@@ -170,13 +176,25 @@ function weekSchema(library: LibraryChoice[]) {
  */
 function resolveMatches(exercises: DraftExercise[], library: LibraryChoice[]): void {
   const byName = new Map(library.map((entry) => [entry.name, entry]));
+
   for (const exercise of exercises) {
     const entry = byName.get(exercise.library_match ?? '');
     if (entry) {
       exercise.library_id = entry.id;
       exercise.library_name = entry.name;
-    } else {
-      exercise.library_match = '';
+      continue;
+    }
+
+    exercise.library_match = '';
+
+    // Second pass on the names alone. The model errs towards not matching,
+    // and that costs the coach the video they recorded — but a guess is a
+    // guess, so it's marked as one and left for them to accept.
+    const guess = suggestMatch(exercise.name ?? '', library);
+    if (guess) {
+      exercise.library_id = guess.id;
+      exercise.library_name = guess.name;
+      exercise.library_suggested = true;
     }
   }
 }
@@ -190,7 +208,7 @@ Rules:
 - Write instructions in plain, warm language a parent can follow without jargon. If the source gives no technique detail, return an empty string rather than inventing one.
 - If the source is a photo or screenshot and part of it is illegible, transcribe what you can read and leave the rest empty. Never fill gaps with plausible-sounding invention.
 - Never output links or URLs. Videos are attached separately by hand.
-- Where a library exercise is offered and one of them is the same movement, name it. That reuses the coach's own wording and their video. Being wrong here is worse than leaving it blank, so when in doubt, don't match.`;
+- Where a library exercise is offered and one of them is the same movement, name it. That reuses the coach's own wording and their video. Different wording for the same movement still counts — "Bicep curls" is "Bicep Curl", and "Upward wall angel" is "Wall angel". A genuinely different exercise does not, however similar the name.`;
 
 export function anthropicConfigured(): boolean {
   return Boolean(process.env.ANTHROPIC_API_KEY);
