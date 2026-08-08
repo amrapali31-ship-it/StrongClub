@@ -143,8 +143,25 @@ export default async function AdminWeek({ params }: { params: Promise<{ weekId: 
         </ul>
 
         <Link
-          href={`/admin/import/workout/${week.id}`}
+          href={`/admin/build/${week.id}`}
           className="card mt-4 flex items-center gap-3 p-4 transition hover:border-ink/25"
+        >
+          <span className="text-2xl" aria-hidden>
+            🧠
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-bold">Build one from my library</span>
+            <span className="block text-sm text-muted">
+              Say what you want &mdash; &ldquo;full body, 50 minutes&rdquo; &mdash; and Claude puts
+              it together from exercises you already have.
+            </span>
+          </span>
+          <span className="shrink-0 text-sm font-semibold text-brand">Build</span>
+        </Link>
+
+        <Link
+          href={`/admin/import/workout/${week.id}`}
+          className="card mt-3 flex items-center gap-3 p-4 transition hover:border-ink/25"
         >
           <span className="text-2xl" aria-hidden>
             ✨

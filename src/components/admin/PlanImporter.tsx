@@ -304,7 +304,7 @@ function useChoices(initiallyOff: string[]) {
   return { rejected, toggle };
 }
 
-function ReviewWorkout({
+export function ReviewWorkout({
   draft,
   target,
   onDiscard,

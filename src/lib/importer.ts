@@ -29,10 +29,14 @@ export interface DraftExercise {
   rest_seconds: number;
 }
 
+/** Sections that repeat as a block, keyed by name. Only supersets appear. */
+export type DraftRounds = Record<string, number>;
+
 export interface DraftWorkout {
   title: string;
   subtitle: string;
   exercises: DraftExercise[];
+  section_rounds?: DraftRounds;
 }
 
 export interface DraftWeek {
@@ -51,6 +55,10 @@ const nullableInteger = { anyOf: [{ type: 'integer' }, { type: 'null' }] };
 export interface LibraryChoice {
   id: string;
   name: string;
+  /** Only needed when composing, where the model picks between them. */
+  category?: string;
+  equipment?: string;
+  hasMedia?: boolean;
 }
 
 /**
@@ -224,6 +232,7 @@ async function draftFromSources<T>(
   input: ImportInput,
   schema: Record<string, unknown>,
   instruction: string,
+  system: string = SYSTEM_PROMPT,
 ): Promise<T> {
   if (!anthropicConfigured()) {
     throw new Error('No ANTHROPIC_API_KEY is set on this deployment.');
@@ -250,7 +259,7 @@ async function draftFromSources<T>(
     // a fallback model rather than handing back an empty response.
     betas: ['server-side-fallback-2026-07-01'],
     fallbacks: 'default',
-    system: SYSTEM_PROMPT,
+    system,
     output_config: {
       effort: 'medium',
       format: { type: 'json_schema', schema },
@@ -317,4 +326,212 @@ export async function draftWorkoutFromSources(
   resolveMatches(draft.exercises, library);
 
   return draft;
+}
+
+/* ------------------------------------------------------------- composing */
+
+export interface StyleExample {
+  title: string;
+  sections: { name: string; rounds: number; exercises: string[] }[];
+}
+
+/**
+ * Builds a workout out of the library, rather than transcribing one from a
+ * source.
+ *
+ * Exercises are an enum of the coach's own entries, so the model can only pick
+ * things that exist — and every pick therefore arrives with its video, its
+ * wording and its equipment already attached. Sections stay free text, since
+ * naming part of a session is the coach's business and not a taxonomy.
+ */
+function composeSchema(library: LibraryChoice[]) {
+  return {
+    type: 'object',
+    properties: {
+      title: { type: 'string', description: 'Short name for the workout.' },
+      subtitle: {
+        type: 'string',
+        description: 'One line on what it is for. Empty string if nothing useful to say.',
+      },
+      sections: {
+        type: 'array',
+        description: 'Parts of the session, in the order they are done.',
+        items: {
+          type: 'object',
+          properties: {
+            name: {
+              type: 'string',
+              description:
+                "What this part is called — 'Warm up', 'Legs', 'Finisher'. Free text.",
+            },
+            rounds: {
+              type: 'integer',
+              description:
+                'How many times this whole block is repeated as a circuit. 1 for a normal section where each exercise is done for its own sets before moving on.',
+            },
+            exercises: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  library_name: {
+                    type: 'string',
+                    enum: library.map((entry) => entry.name),
+                    description: 'Exactly one of the coach\'s library exercises.',
+                  },
+                  mode: {
+                    type: 'string',
+                    enum: ['reps', 'time'],
+                    description: "'reps' for counted repetitions, 'time' for a hold or a walk.",
+                  },
+                  sets: {
+                    type: 'integer',
+                    description:
+                      'Sets of this exercise. In a section with rounds above 1, use 1 — the rounds are the sets.',
+                  },
+                  reps: { ...nullableInteger, description: "Null when mode is 'time'." },
+                  duration_seconds: {
+                    ...nullableInteger,
+                    description: "Seconds. Null when mode is 'reps'.",
+                  },
+                  rest_seconds: { type: 'integer', description: 'Rest after each set or round.' },
+                },
+                required: [
+                  'library_name',
+                  'mode',
+                  'sets',
+                  'reps',
+                  'duration_seconds',
+                  'rest_seconds',
+                ],
+                additionalProperties: false,
+              },
+            },
+          },
+          required: ['name', 'rounds', 'exercises'],
+          additionalProperties: false,
+        },
+      },
+    },
+    required: ['title', 'subtitle', 'sections'],
+    additionalProperties: false,
+  };
+}
+
+interface ComposedWorkout {
+  title: string;
+  subtitle: string;
+  sections: {
+    name: string;
+    rounds: number;
+    exercises: {
+      library_name: string;
+      mode: ExerciseMode;
+      sets: number;
+      reps: number | null;
+      duration_seconds: number | null;
+      rest_seconds: number;
+    }[];
+  }[];
+}
+
+/** What the model is told about the library and about how this coach writes. */
+function briefing(library: LibraryChoice[], examples: StyleExample[]): string {
+  const catalogue = library
+    .map((entry) => {
+      const bits = [entry.category, entry.equipment].filter(Boolean).join(', ');
+      return `- ${entry.name}${bits ? ` (${bits})` : ''}${entry.hasMedia ? ' [has a video]' : ''}`;
+    })
+    .join('\n');
+
+  if (examples.length === 0) return `The library:\n${catalogue}`;
+
+  const style = examples
+    .map((example) => {
+      const parts = example.sections
+        .map(
+          (section) =>
+            `  ${section.name}${section.rounds > 1 ? ` (${section.rounds} rounds)` : ''}: ${section.exercises.join(', ')}`,
+        )
+        .join('\n');
+      return `${example.title}\n${parts}`;
+    })
+    .join('\n\n');
+
+  return `The library:\n${catalogue}\n\nWorkouts this coach has already written, as a guide to how they like to structure and name things:\n\n${style}`;
+}
+
+const COMPOSE_PROMPT = `You build workouts for a small family workout app, from a library the coach has curated. The people doing them are the author's parents — typically older adults — so sessions are sensible, well warmed up, and never showy.
+
+Rules:
+- Use only exercises from the library given to you. It is a closed list; there is nothing else available.
+- Follow the requested length. Estimate honestly: a set takes about as long as its reps times four seconds, or its duration, plus its rest. Come in near the target rather than wildly over.
+- Open with a warm-up section and close with a cool-down or stretch, unless the request plainly says otherwise.
+- Take the coach's existing workouts as a guide to naming, section structure and how hard they pitch things. Match their style; don't imitate their exact content.
+- Use rounds above 1 only for a genuine circuit, where two or more exercises are done back to back and then repeated. In that case each exercise gets 1 set, because the rounds are the sets.
+- Prefer exercises marked as having a video where there's a reasonable choice between equals.
+- Vary the movements. Do not put the same exercise in twice.`;
+
+/**
+ * Turns a request like "a full body session, 50 minutes" into a workout drawn
+ * from the library, in the shape the review screen already understands.
+ */
+export async function composeWorkout(
+  request: string,
+  library: LibraryChoice[],
+  examples: StyleExample[],
+): Promise<DraftWorkout> {
+  if (library.length === 0) {
+    throw new Error('Your library is empty, so there is nothing to build a workout from.');
+  }
+
+  const composed = await draftFromSources<ComposedWorkout>(
+    { text: `${briefing(library, examples)}\n\nWhat the coach asked for: ${request.trim()}`, images: [] },
+    composeSchema(library),
+    'Build one workout from the library below',
+    COMPOSE_PROMPT,
+  );
+
+  if (!composed.sections?.length) {
+    throw new Error('Claude did not manage to put a workout together. Try rewording the request.');
+  }
+
+  const byName = new Map(library.map((entry) => [entry.name, entry]));
+  const exercises: DraftExercise[] = [];
+  const rounds: DraftRounds = {};
+
+  for (const section of composed.sections) {
+    if (section.rounds > 1) rounds[section.name] = Math.min(20, section.rounds);
+
+    for (const item of section.exercises) {
+      const entry = byName.get(item.library_name);
+      if (!entry) continue;
+
+      exercises.push({
+        name: entry.name,
+        library_match: entry.name,
+        library_id: entry.id,
+        library_name: entry.name,
+        category: section.name,
+        equipment: '',
+        instructions: '',
+        mode: item.mode === 'time' ? 'time' : 'reps',
+        sets: item.sets,
+        reps: item.reps,
+        duration_seconds: item.duration_seconds,
+        rest_seconds: item.rest_seconds,
+      });
+    }
+  }
+
+  if (exercises.length === 0) {
+    throw new Error('Nothing it chose matched your library. Try again.');
+  }
+
+  return {
+    title: composed.title,
+    subtitle: composed.subtitle,
+    exercises,
+    section_rounds: rounds,
+  };
 }

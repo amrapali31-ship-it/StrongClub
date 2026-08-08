@@ -242,7 +242,11 @@ async function exerciseFromDraft(
 
   const shape = {
     name: source?.name || draft.name || 'Untitled exercise',
-    category: source?.category || draft.category || '',
+    // The draft's section wins over the library's category: a section names
+    // part of this workout and is chosen for it, while a category is only how
+    // the movement is filed. Letting the filing win put every composed
+    // exercise under "Legs" and "Upper body" and left the real sections empty.
+    category: draft.category || source?.category || '',
     equipment: source?.equipment || draft.equipment || '',
     instructions: source?.instructions || draft.instructions || '',
     mode,
@@ -337,12 +341,20 @@ export async function saveImportedWorkout(formData: FormData): Promise<void> {
     redirect(`/admin/week/${weekId}`);
   }
 
+  // Rounds only arrive from a composed workout; an imported one has none.
+  const rounds = draft.section_rounds ?? {};
+  const sections = [...new Set(draft.exercises.map((e) => e.category ?? '').filter(Boolean))];
+
   const siblings = await db.listWorkouts(weekId);
   const workout = await db.createWorkout({
     week_id: weekId,
     title: str(formData, 'title') || draft.title || 'Imported workout',
     emoji: str(formData, 'emoji'),
     subtitle: draft.subtitle ?? '',
+    // Recorded explicitly so the order survives even where a section's
+    // exercises are later moved out of it.
+    sections,
+    section_rounds: rounds,
     position: siblings.length,
   });
 
