@@ -88,125 +88,159 @@ export default async function WorkoutOverview({
 
       <WorkoutSession workoutId={workout.id} title={workout.title} />
 
-      {groups.map((group) => (
-        <section key={group.category || 'other'} className="mt-8 first:mt-6">
-          {showHeadings && (
-            <h2 className="mb-3 flex flex-wrap items-baseline gap-2 text-sm font-bold tracking-widest text-brand uppercase">
-              {group.heading}
-              <span className="text-xs font-semibold tracking-normal text-muted normal-case">
-                {group.exercises.length} {group.exercises.length === 1 ? 'exercise' : 'exercises'}
-              </span>
-              {(rounds[group.category] ?? 1) > 1 && (
-                <span className="rounded-full bg-brand-tint px-2 py-0.5 text-xs font-bold tracking-normal text-brand normal-case">
-                  {rounds[group.category]} rounds
+      {groups.map((group) => {
+        const repeats = rounds[group.category] ?? 1;
+
+        return (
+          <section key={group.category || 'other'} className="mt-8 first:mt-6">
+            {showHeadings && (
+              <h2 className="mb-3 flex flex-wrap items-baseline gap-2 text-sm font-bold tracking-widest text-brand uppercase">
+                {group.heading}
+                <span className="text-xs font-semibold tracking-normal text-muted normal-case">
+                  {group.exercises.length} {group.exercises.length === 1 ? 'exercise' : 'exercises'}
                 </span>
+                {repeats > 1 && (
+                  <span className="rounded-full bg-brand-tint px-2 py-0.5 text-xs font-bold tracking-normal text-brand normal-case">
+                    {repeats} rounds
+                  </span>
+                )}
+              </h2>
+            )}
+
+            {/* A circuit is drawn as one block: lettered rungs joined by a rail,
+              closed off by the loop back to the top. The prose above says it;
+              this is what makes it visible at arm's length. */}
+            <div
+              className={
+                repeats > 1 && group.exercises.length > 1
+                  ? 'rounded-xl2 border-2 border-brand/35 bg-brand-tint/25 p-3'
+                  : ''
+              }
+            >
+              {repeats > 1 && group.exercises.length > 1 && (
+                <>
+                  <p className="text-base">
+                    {/* Explicit, because a space that only exists at the end of
+                        a JSX line does not survive to the page. */}
+                    <span className="font-semibold">Do these back to back.</span>{' '}
+                    Work through them in order, then straight back to the top &mdash;{' '}
+                    <span className="font-semibold">{repeats} times through in total.</span>
+                  </p>
+
+                  {/* Spelled out only for whoever wants it. `details` rather
+                      than a hover tooltip: there is no hover on a phone, and
+                      this is read on a phone. */}
+                  <details className="mt-2 mb-3 text-base text-muted">
+                    <summary className="cursor-pointer list-none font-semibold text-brand">
+                      What does that look like?
+                    </summary>
+                    <p className="mt-2">
+                      {group.exercises.map((e) => e.name).join(', then ')}, then back to{' '}
+                      {group.exercises[0].name} again &mdash; not everything you&rsquo;re doing of{' '}
+                      {group.exercises[0].name} before starting {group.exercises[1].name}.
+                    </p>
+                  </details>
+                </>
               )}
-            </h2>
-          )}
 
-          {/* Supersets: the thing people get wrong is doing all their sets of
-              one exercise before starting the next, so say the order out loud
-              with the real names rather than describing it in the abstract. */}
-          {(rounds[group.category] ?? 1) > 1 && group.exercises.length > 1 && (
-            <div className="mb-3 rounded-xl2 border border-line bg-surface px-4 py-3">
-              <p className="text-base">
-                {/* Explicit, because a space that only exists at the end of a
-                    JSX line does not survive to the page. */}
-                <span className="font-semibold">Do these back to back.</span>{' '}
-                Work through them in order, then straight back to the top &mdash;{' '}
-                <span className="font-semibold">
-                  {rounds[group.category]} times through in total.
-                </span>
-              </p>
+              <ol className="flex flex-col gap-3">
+                {group.exercises.map((exercise, position) => {
+                  const done = doneExerciseIds.has(exercise.id);
+                  const circuit = repeats > 1 && group.exercises.length > 1;
+                  const last = position === group.exercises.length - 1;
 
-              {/* Spelled out only for whoever wants it. `details` rather than a
-                  hover tooltip: there is no hover on a phone, and this is read
-                  on a phone. */}
-              <details className="mt-2 text-base text-muted">
-                <summary className="cursor-pointer list-none font-semibold text-brand">
-                  What does that look like?
-                </summary>
-                <p className="mt-2">
-                  {group.exercises.map((e) => e.name).join(', then ')}, then back to{' '}
-                  {group.exercises[0].name} again &mdash; not everything you&rsquo;re doing of{' '}
-                  {group.exercises[0].name} before starting {group.exercises[1].name}.
-                </p>
-              </details>
+                  const card = (
+                    <div className={`card p-4 ${done ? 'bg-success-tint/40' : ''}`}>
+                      <div className="flex items-start gap-3">
+                        {!circuit && (
+                          <span className="mt-1 w-6 shrink-0 text-center text-base font-bold text-muted/70 tabular-nums">
+                            {running.indexOf(exercise) + 1}
+                          </span>
+                        )}
 
-              <p className="mt-2 text-sm text-muted">Tick each one off after its last round.</p>
-            </div>
-          )}
+                        <div className="min-w-0 flex-1">
+                          <h2 className="text-2xl font-bold">{exercise.name}</h2>
+                          <p className="mt-0.5 text-lg font-semibold text-brand">
+                            {circuit ? `${targetLabel(exercise)} each round` : setsLabel(exercise)}
+                          </p>
+                          {exercise.equipment && (
+                            <p className="mt-1 text-base text-muted">{exercise.equipment}</p>
+                          )}
+                        </div>
 
-          <ol className="flex flex-col gap-4">
-            {group.exercises.map((exercise) => {
-              const done = doneExerciseIds.has(exercise.id);
-              const i = running.indexOf(exercise);
-              // In a repeating section the rounds are the sets, so the card
-              // shows one round's work and the heading says how many rounds.
-              const repeating = (rounds[group.category] ?? 1) > 1;
+                        <form action={toggleExerciseForm} className="shrink-0">
+                          <input type="hidden" name="exerciseId" value={exercise.id} />
+                          <input type="hidden" name="workoutId" value={workout.id} />
+                          <input type="hidden" name="done" value={done ? 'false' : 'true'} />
+                          <button
+                            type="submit"
+                            aria-label={
+                              done ? `Mark ${exercise.name} not done` : `Mark ${exercise.name} done`
+                            }
+                            className={`flex h-12 w-12 items-center justify-center rounded-full border-2 text-xl font-bold transition active:scale-95 ${
+                              done
+                                ? 'border-success bg-success text-white'
+                                : 'border-muted/50 text-muted/25 hover:border-ink/40 hover:text-muted/50'
+                            }`}
+                          >
+                            ✓
+                          </button>
+                        </form>
+                      </div>
 
-              return (
-                <li key={exercise.id} className={`card p-4 ${done ? 'bg-success-tint/40' : ''}`}>
-                  <div className="flex items-start gap-3">
-                    <span className="mt-1 w-6 shrink-0 text-center text-base font-bold text-muted/70 tabular-nums">
-                      {i + 1}
-                    </span>
+                      <div className={`mt-4 ${circuit ? '' : 'sm:pl-9'}`}>
+                        <ExerciseMedia
+                          mediaType={exercise.media_type}
+                          url={exercise.media_url}
+                          posterUrl={exercise.poster_url}
+                          name={exercise.name}
+                        />
 
-                    <div className="min-w-0 flex-1">
-                      <h2 className="text-2xl font-bold">{exercise.name}</h2>
-                      <p className="mt-0.5 text-lg font-semibold text-brand">
-                        {repeating ? `${targetLabel(exercise)} each round` : setsLabel(exercise)}
-                      </p>
-                      {exercise.equipment && (
-                        <p className="mt-1 text-base text-muted">{exercise.equipment}</p>
-                      )}
+                        {exercise.instructions && (
+                          <p className="mt-3 text-lg leading-relaxed whitespace-pre-line">
+                            {exercise.instructions}
+                          </p>
+                        )}
+
+                        {exercise.mode === 'time' && (
+                          <InlineTimer seconds={exercise.duration_seconds ?? 30} />
+                        )}
+                      </div>
                     </div>
+                  );
 
-                    <form action={toggleExerciseForm} className="shrink-0">
-                      <input type="hidden" name="exerciseId" value={exercise.id} />
-                      <input type="hidden" name="workoutId" value={workout.id} />
-                      <input type="hidden" name="done" value={done ? 'false' : 'true'} />
-                      <button
-                        type="submit"
-                        aria-label={
-                          done ? `Mark ${exercise.name} not done` : `Mark ${exercise.name} done`
-                        }
-                        className={`flex h-12 w-12 items-center justify-center rounded-full border-2 text-xl font-bold transition active:scale-95 ${
-                          done
-                            ? 'border-success bg-success text-white'
-                            : 'border-muted/50 text-muted/25 hover:border-ink/40 hover:text-muted/50'
-                        }`}
-                      >
-                        ✓
-                      </button>
-                    </form>
-                  </div>
+                  if (!circuit) return <li key={exercise.id}>{card}</li>;
 
-                  <div className="mt-4 sm:pl-9">
-                    <ExerciseMedia
-                      mediaType={exercise.media_type}
-                      url={exercise.media_url}
-                      posterUrl={exercise.poster_url}
-                      name={exercise.name}
-                    />
+                  return (
+                    <li key={exercise.id} className="flex gap-3">
+                      <div className="flex w-8 shrink-0 flex-col items-center">
+                        {/* Letters, not numbers: A then B then A again is how a
+                          circuit is written everywhere else. */}
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-sm font-extrabold text-canvas">
+                          {String.fromCharCode(65 + position)}
+                        </span>
+                        {/* The rail joins each rung to the next, so the block
+                          reads as one thing rather than three cards. */}
+                        {!last && <span className="mt-1 w-0.5 flex-1 rounded-full bg-brand/35" />}
+                      </div>
+                      <div className="min-w-0 flex-1">{card}</div>
+                    </li>
+                  );
+                })}
+              </ol>
 
-                    {exercise.instructions && (
-                      <p className="mt-3 text-lg leading-relaxed whitespace-pre-line">
-                        {exercise.instructions}
-                      </p>
-                    )}
-
-                    {exercise.mode === 'time' && (
-                      <InlineTimer seconds={exercise.duration_seconds ?? 30} />
-                    )}
-
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
-        </section>
-      ))}
+              {repeats > 1 && group.exercises.length > 1 && (
+                <p className="mt-3 flex items-center gap-2 pl-1 text-base font-semibold text-brand">
+                  <span aria-hidden className="text-xl leading-none">
+                    ↻
+                  </span>
+                  Back to A &mdash; {repeats} rounds in all. Tick each one off after its last.
+                </p>
+              )}
+            </div>
+          </section>
+        );
+      })}
 
       {doneCount > 0 && (
         <form action={resetWorkoutForm} className="mt-8">
