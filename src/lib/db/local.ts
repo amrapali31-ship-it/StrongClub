@@ -248,6 +248,7 @@ export const localDb: Database = {
         rest_seconds: data.rest_seconds ?? 30,
         media_type: data.media_type ?? 'none',
         media_url: data.media_url ?? '',
+        poster_url: data.poster_url ?? '',
         position: data.position ?? nextPosition(siblings),
         created_at: new Date().toISOString(),
       };
@@ -297,6 +298,7 @@ export const localDb: Database = {
         rest_seconds: data.rest_seconds ?? 30,
         media_type: data.media_type ?? 'none',
         media_url: data.media_url ?? '',
+        poster_url: data.poster_url ?? '',
         created_at: new Date().toISOString(),
       };
       d.library.push(entry);

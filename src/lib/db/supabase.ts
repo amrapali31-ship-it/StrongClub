@@ -198,6 +198,7 @@ export const supabaseDb: Database = {
           rest_seconds: data.rest_seconds ?? 30,
           media_type: data.media_type ?? 'none',
           media_url: data.media_url ?? '',
+          poster_url: data.poster_url ?? '',
           position: data.position ?? count ?? 0,
         })
         .select()
@@ -249,6 +250,7 @@ export const supabaseDb: Database = {
           rest_seconds: data.rest_seconds ?? 30,
           media_type: data.media_type ?? 'none',
           media_url: data.media_url ?? '',
+          poster_url: data.poster_url ?? '',
         })
         .select()
         .single(),

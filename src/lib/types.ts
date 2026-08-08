@@ -70,6 +70,12 @@ export interface Exercise {
   rest_seconds: number;
   media_type: MediaType;
   media_url: string;
+  /**
+   * A still from the video, shown before anything is played. Without one a
+   * browser has to download the video to find a frame, which is how a page of
+   * demos turns into fifty megabytes.
+   */
+  poster_url: string;
   position: number;
   created_at: string;
 }
@@ -134,6 +140,8 @@ export interface LibraryExercise {
   rest_seconds: number;
   media_type: MediaType;
   media_url: string;
+  /** A still from the video. See Exercise.poster_url. */
+  poster_url: string;
   created_at: string;
 }
 

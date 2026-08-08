@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { MediaFrame, MediaThumb } from '@/components/MediaFrame';
 import { youTubeId } from '@/lib/media';
 import type { MediaType } from '@/lib/types';
+import { capturePoster, posterFile } from '@/lib/poster';
 import { uploadFile } from '@/lib/upload-client';
 
 type Source = 'none' | 'youtube' | 'upload' | 'existing';
@@ -19,6 +20,7 @@ interface Props {
   name: string;
   defaultUrl: string;
   defaultType: MediaType;
+  defaultPoster?: string;
 }
 
 /**
@@ -38,6 +40,7 @@ interface Stored {
   bytes: number;
   uploadedAt: string;
   usedBy: string[];
+  posterUrl: string;
 }
 
 /**
@@ -53,7 +56,7 @@ function ExistingMedia({
   onPick,
 }: {
   selected: string;
-  onPick: (media: { url: string; mediaType: MediaType }) => void;
+  onPick: (media: { url: string; mediaType: MediaType; posterUrl?: string }) => void;
 }) {
   const [media, setMedia] = useState<Stored[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -95,12 +98,19 @@ function ExistingMedia({
             <li key={item.url}>
               <button
                 type="button"
-                onClick={() => onPick({ url: item.url, mediaType: item.mediaType })}
+                onClick={() =>
+                  onPick({ url: item.url, mediaType: item.mediaType, posterUrl: item.posterUrl })
+                }
                 className={`w-full rounded-xl border-2 p-2 text-left transition ${
                   mine ? 'border-brand bg-brand-tint' : 'border-line hover:border-ink/25'
                 }`}
               >
-                <MediaThumb mediaType={item.mediaType} url={item.url} name="" />
+                <MediaThumb
+                  mediaType={item.mediaType}
+                  url={item.url}
+                  posterUrl={item.posterUrl}
+                  name=""
+                />
                 <p className="mt-1.5 truncate text-xs font-semibold">
                   {item.usedBy[0] ?? 'Not used yet'}
                 </p>
@@ -119,10 +129,11 @@ function ExistingMedia({
   );
 }
 
-export function MediaPicker({ name, defaultUrl, defaultType }: Props) {
+export function MediaPicker({ name, defaultUrl, defaultType, defaultPoster = '' }: Props) {
   const [source, setSource] = useState<Source>(sourceFor(defaultType));
   const [url, setUrl] = useState(defaultUrl);
   const [mediaType, setMediaType] = useState<MediaType>(defaultType);
+  const [poster, setPoster] = useState(defaultPoster);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -142,6 +153,18 @@ export function MediaPicker({ name, defaultUrl, defaultType }: Props) {
       const result = await uploadFile(file, setProgress);
       setUrl(result.url);
       setMediaType(result.mediaType);
+      setPoster('');
+
+      // A still, captured here from the file already in hand, so no browser
+      // ever has to download the video just to show a thumbnail. A failure
+      // costs the thumbnail, not the upload.
+      if (result.mediaType === 'video') {
+        const still = await capturePoster(file);
+        if (still) {
+          const uploaded = await uploadFile(posterFile(still, file.name));
+          setPoster(uploaded.url);
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed.');
       // Surfaces it in the coach-only error strip too, with the stack, so a
@@ -187,6 +210,7 @@ export function MediaPicker({ name, defaultUrl, defaultType }: Props) {
 
       <input type="hidden" name="media_url" value={effectiveUrl} />
       <input type="hidden" name="media_type" value={effectiveType} />
+      <input type="hidden" name="poster_url" value={effectiveType === 'video' ? poster : ''} />
 
       <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Demo source">
         {(
@@ -241,6 +265,7 @@ export function MediaPicker({ name, defaultUrl, defaultType }: Props) {
           onPick={(picked) => {
             setUrl(picked.url);
             setMediaType(picked.mediaType);
+            setPoster(picked.posterUrl ?? '');
           }}
         />
       )}
@@ -303,7 +328,12 @@ export function MediaPicker({ name, defaultUrl, defaultType }: Props) {
 
       {source !== 'none' && effectiveUrl && (
         <div className="mt-4 max-w-sm">
-          <MediaFrame mediaType={effectiveType} url={effectiveUrl} name={name || 'Preview'} />
+          <MediaFrame
+            mediaType={effectiveType}
+            url={effectiveUrl}
+            posterUrl={poster}
+            name={name || 'Preview'}
+          />
         </div>
       )}
     </div>

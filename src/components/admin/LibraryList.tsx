@@ -69,6 +69,7 @@ export function LibraryList({
                     <MediaThumb
                       mediaType={exercise.media_type}
                       url={exercise.media_url}
+                      posterUrl={exercise.poster_url}
                       name={exercise.name}
                     />
                     <div className="min-w-0 flex-1">

@@ -76,6 +76,8 @@ export interface StoredMedia {
   uploadedAt: string;
   /** Exercises and library entries already pointing at it. */
   usedBy: string[];
+  /** Its still, if any row using it has one. */
+  posterUrl: string;
 }
 
 function mediaTypeFor(name: string): 'image' | 'video' | null {
@@ -94,7 +96,7 @@ function mediaTypeFor(name: string): 'image' | 'video' | null {
  * the filming as well.
  */
 export async function listStoredMedia(): Promise<StoredMedia[]> {
-  const items: Omit<StoredMedia, 'usedBy'>[] = [];
+  const items: Omit<StoredMedia, 'usedBy' | 'posterUrl'>[] = [];
 
   if (usingSupabase) {
     const sb = supabaseAdmin();
@@ -140,14 +142,22 @@ export async function listStoredMedia(): Promise<StoredMedia[]> {
   // actually tellable apart.
   const [exercises, library] = await Promise.all([db.listAllExercises(), db.listLibrary()]);
   const byUrl = new Map<string, string[]>();
+  const posters = new Map<string, string>();
   for (const row of [...exercises, ...library]) {
     if (!row.media_url) continue;
     const names = byUrl.get(row.media_url) ?? [];
     if (!names.includes(row.name)) names.push(row.name);
     byUrl.set(row.media_url, names);
+    if (row.poster_url && !posters.has(row.media_url)) {
+      posters.set(row.media_url, row.poster_url);
+    }
   }
 
-  return items.map((item) => ({ ...item, usedBy: byUrl.get(item.url) ?? [] }));
+  return items.map((item) => ({
+    ...item,
+    usedBy: byUrl.get(item.url) ?? [],
+    posterUrl: posters.get(item.url) ?? '',
+  }));
 }
 
 /**

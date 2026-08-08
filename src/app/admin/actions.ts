@@ -259,6 +259,7 @@ async function exerciseFromDraft(
     // plausible-looking links that go nowhere.
     media_type: source?.media_type ?? 'none',
     media_url: source?.media_url ?? '',
+    poster_url: source?.poster_url ?? '',
     position,
   });
 
@@ -306,7 +307,7 @@ class LibraryCollector {
     this.saved += 1;
     // Imports never carry media, so a fresh entry starts without one and gets
     // a video attached by hand later.
-    await db.createLibraryExercise({ ...shape, media_type: 'none', media_url: '' });
+    await db.createLibraryExercise({ ...shape, media_type: 'none', media_url: '', poster_url: '' });
   }
 
   get count(): number {
@@ -507,6 +508,9 @@ export async function saveLibraryExercise(formData: FormData): Promise<void> {
     rest_seconds: Math.max(0, Math.round(num(formData, 'rest_seconds', 30))),
     media_type: mediaType,
     media_url: mediaUrl,
+    // Cleared with the media: a still for a video that's gone is worse than
+    // none, because it shows a frame nothing will play.
+    poster_url: mediaType === 'video' ? str(formData, 'poster_url') : '',
   });
 
   revalidatePath('/admin/library');
@@ -553,6 +557,7 @@ export async function swapExercise(formData: FormData): Promise<void> {
     instructions: source.instructions,
     media_type: source.media_type,
     media_url: source.media_url,
+    poster_url: source.poster_url ?? '',
     mode: source.mode,
     sets: sameKind ? current.sets : source.sets,
     reps: sameKind ? current.reps : source.reps,
@@ -584,6 +589,7 @@ export async function addExerciseFromLibrary(formData: FormData): Promise<void> 
     rest_seconds: source.rest_seconds,
     media_type: source.media_type,
     media_url: source.media_url,
+    poster_url: source.poster_url ?? '',
   });
 
   revalidatePath(`/admin/workout/${workoutId}`);
@@ -612,6 +618,7 @@ export async function saveExerciseToLibrary(formData: FormData): Promise<void> {
     rest_seconds: exercise.rest_seconds,
     media_type: exercise.media_type,
     media_url: exercise.media_url,
+    poster_url: exercise.poster_url ?? '',
   };
 
   // Same name means "update my saved version", not "make a near-duplicate".
@@ -664,6 +671,9 @@ export async function saveExercise(formData: FormData): Promise<void> {
     rest_seconds: Math.max(0, Math.round(num(formData, 'rest_seconds', 30))),
     media_type: mediaType,
     media_url: mediaUrl,
+    // Cleared with the media: a still for a video that's gone is worse than
+    // none, because it shows a frame nothing will play.
+    poster_url: mediaType === 'video' ? str(formData, 'poster_url') : '',
   });
 
   revalidatePath(`/admin/workout/${exercise.workout_id}`);
@@ -888,3 +898,30 @@ export async function reorderExercises(formData: FormData): Promise<void> {
   revalidatePath('/home');
 }
 
+
+/**
+ * Records a still against every row using a given video.
+ *
+ * Keyed by the video's URL rather than by row id because one clip often
+ * demonstrates several exercises — capturing it once should cover all of them.
+ */
+export async function saveMediaPoster(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const mediaUrl = str(formData, 'mediaUrl');
+  const posterUrl = str(formData, 'posterUrl');
+  if (!mediaUrl || !posterUrl) return;
+
+  const [exercises, library] = await Promise.all([db.listAllExercises(), db.listLibrary()]);
+
+  await Promise.all([
+    ...exercises
+      .filter((e) => e.media_url === mediaUrl && !e.poster_url)
+      .map((e) => db.updateExercise(e.id, { poster_url: posterUrl })),
+    ...library
+      .filter((e) => e.media_url === mediaUrl && !e.poster_url)
+      .map((e) => db.updateLibraryExercise(e.id, { poster_url: posterUrl })),
+  ]);
+
+  revalidatePath('/admin/library');
+  revalidatePath('/home');
+}

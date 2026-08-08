@@ -1,6 +1,7 @@
 import { BackLink } from '@/components/BackLink';
-import { addLibraryExercise } from '@/app/admin/actions';
+import { addLibraryExercise, saveMediaPoster } from '@/app/admin/actions';
 import { LibraryList } from '@/components/admin/LibraryList';
+import { PosterBackfill } from '@/components/admin/PosterBackfill';
 import { db } from '@/lib/db';
 import { LIBRARY_CATEGORIES } from '@/lib/types';
 
@@ -67,6 +68,8 @@ export default async function AdminLibrary() {
           Add
         </button>
       </form>
+
+      <PosterBackfill save={saveMediaPoster} />
 
       {library.length === 0 ? (
         <div className="card mt-6 p-5">

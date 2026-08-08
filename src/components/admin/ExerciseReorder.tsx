@@ -306,6 +306,7 @@ function SortableExercise({
       <MediaThumb
         mediaType={exercise.media_type}
         url={exercise.media_url}
+        posterUrl={exercise.poster_url}
         name={exercise.name}
       />
 

@@ -1,16 +1,25 @@
-import { firstFrame, youTubeEmbedUrl } from '@/lib/media';
+import { youTubeEmbedUrl } from '@/lib/media';
 import type { MediaType } from '@/lib/types';
 
 interface Props {
   mediaType: MediaType;
   url: string;
+  /** Still for a video, so a thumbnail never costs a download. */
+  posterUrl?: string;
   name: string;
   /** Videos loop silently on the exercise screen, but not in list previews. */
   autoPlay?: boolean;
   className?: string;
 }
 
-export function MediaFrame({ mediaType, url, name, autoPlay = false, className = '' }: Props) {
+export function MediaFrame({
+  mediaType,
+  url,
+  posterUrl,
+  name,
+  autoPlay = false,
+  className = '',
+}: Props) {
   const frame = `relative w-full overflow-hidden rounded-xl2 bg-ink/5 ${className}`;
 
   if (mediaType === 'youtube') {
@@ -33,7 +42,8 @@ export function MediaFrame({ mediaType, url, name, autoPlay = false, className =
     return (
       <div className={`${frame} aspect-video`}>
         <video
-          src={firstFrame(url)}
+          src={url}
+          poster={posterUrl || undefined}
           className="absolute inset-0 h-full w-full object-contain"
           controls
           playsInline
@@ -73,7 +83,12 @@ function Placeholder({ name, className = '' }: { name: string; className?: strin
 }
 
 /** Small square preview used in exercise lists. */
-export function MediaThumb({ mediaType, url, name }: Omit<Props, 'autoPlay' | 'className'>) {
+export function MediaThumb({
+  mediaType,
+  url,
+  posterUrl,
+  name,
+}: Omit<Props, 'autoPlay' | 'className'>) {
   // `contain` rather than `cover` so diagrams and portrait clips stay legible
   // at thumbnail size instead of being cropped to their middle.
   const base = 'h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-ink/5 object-contain';
@@ -92,7 +107,15 @@ export function MediaThumb({ mediaType, url, name }: Omit<Props, 'autoPlay' | 'c
   }
 
   if (mediaType === 'video') {
-    return <video src={firstFrame(url)} className={base} muted playsInline preload="metadata" />;
+    // Never the video itself: a list of twenty rows would fetch twenty clips
+    // to show twenty postage stamps.
+    if (posterUrl) {
+      // eslint-disable-next-line @next/next/no-img-element
+      return <img src={posterUrl} alt="" loading="lazy" className={base} />;
+    }
+    return (
+      <div className={`${base} flex items-center justify-center text-lg text-muted/60`}>▶</div>
+    );
   }
 
   return (

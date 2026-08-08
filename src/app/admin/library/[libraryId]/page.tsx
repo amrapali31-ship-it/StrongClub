@@ -110,6 +110,7 @@ export default async function AdminLibraryExercise({
             name={exercise.name}
             defaultUrl={exercise.media_url}
             defaultType={exercise.media_type}
+            defaultPoster={exercise.poster_url ?? ''}
           />
         </div>
 

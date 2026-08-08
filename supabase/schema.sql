@@ -108,3 +108,6 @@ alter table exercises add column if not exists equipment text not null default '
 alter table library_exercises add column if not exists equipment text not null default '';
 
 alter table workouts add column if not exists section_rounds jsonb not null default '{}'::jsonb;
+
+alter table exercises add column if not exists poster_url text not null default '';
+alter table library_exercises add column if not exists poster_url text not null default '';
